@@ -75,6 +75,7 @@ _pimpmytmux() {
                 'themes:List available themes'
                 'profile:Profile management'
                 'session:Session management'
+                'template:Session template management'
                 'layout:Apply a predefined layout'
                 'layouts:List available layouts'
                 'zen:Toggle zen mode'
@@ -159,6 +160,27 @@ _pimpmytmux() {
                         case $words[3] in
                             save|restore)
                                 _pimpmytmux_sessions
+                                ;;
+                        esac
+                    fi
+                    ;;
+
+                template)
+                    if (( CURRENT == 3 )); then
+                        local subcmds=(
+                            'list:List available templates'
+                            'apply:Apply a session template'
+                            'save:Save current session as template'
+                            'init:Initialize example templates'
+                        )
+                        _describe -t subcommands 'subcommand' subcmds
+                    elif (( CURRENT == 4 )); then
+                        case $words[3] in
+                            apply)
+                                _message 'Template name'
+                                ;;
+                            save)
+                                _message 'Template name'
                                 ;;
                         esac
                     fi

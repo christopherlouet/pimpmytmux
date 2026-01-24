@@ -36,6 +36,7 @@ load_lib "wizard" "optional"
 load_module "${PIMPMYTMUX_ROOT}/modules/sessions/save.sh" "optional"
 load_module "${PIMPMYTMUX_ROOT}/modules/sessions/restore.sh" "optional"
 load_module "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh" "optional"
+load_module "${PIMPMYTMUX_ROOT}/modules/sessions/templates.sh" "optional"
 
 # -----------------------------------------------------------------------------
 # CLI Configuration
@@ -66,6 +67,7 @@ ${BOLD}COMMANDS:${RESET}
     themes          List available themes (--gallery for visual)
     profile <cmd>   Profile management (list, switch, create, delete)
     session <cmd>   Session management (save, restore, list)
+    template <cmd>  Session template management (list, apply, save, init)
     layout <name>   Apply a predefined layout (--preview to preview)
     layouts         List available layouts
     zen [on|off]    Toggle zen mode (hide status bar + borders)
@@ -770,6 +772,84 @@ cmd_session() {
     esac
 }
 
+## Session template management command
+cmd_template() {
+    local subcmd="${1:-}"
+    shift || true
+
+    case "$subcmd" in
+        list)
+            if ! check_command list_session_templates; then
+                log_error "Session templates not available"
+                exit 1
+            fi
+            echo -e "${BOLD}Available session templates:${RESET}"
+            echo ""
+            local templates
+            templates=$(list_session_templates)
+            if [[ -z "$templates" ]]; then
+                echo "  No templates found."
+                echo ""
+                echo "Create templates with: pimpmytmux template save <name>"
+                echo "Or initialize examples: pimpmytmux template init"
+            else
+                while IFS= read -r t; do
+                    if [[ -n "$t" ]]; then
+                        local name
+                        name=$(get_template_name "$t")
+                        echo "  $t → $name"
+                    fi
+                done <<< "$templates"
+            fi
+            echo ""
+            ;;
+        apply)
+            local template="${1:-}"
+            local session_name="${2:-}"
+            if [[ -z "$template" ]]; then
+                log_error "Template name required"
+                log_info "Usage: pimpmytmux template apply <name> [session-name]"
+                exit 1
+            fi
+            apply_session_template "$template" "$session_name"
+            ;;
+        save)
+            local name="${1:-}"
+            if [[ -z "$name" ]]; then
+                log_error "Template name required"
+                log_info "Usage: pimpmytmux template save <name>"
+                exit 1
+            fi
+            save_as_template "$name"
+            ;;
+        init)
+            init_session_templates
+            log_success "Session templates initialized"
+            ;;
+        "")
+            log_error "Subcommand required"
+            echo ""
+            echo "Usage: pimpmytmux template <command>"
+            echo ""
+            echo "Commands:"
+            echo "    list                  List available templates"
+            echo "    apply <name> [session] Apply a template"
+            echo "    save <name>           Save current session as template"
+            echo "    init                  Initialize with example templates"
+            echo ""
+            echo "Templates support variables:"
+            echo "    \${PROJECT_NAME}  - Project name"
+            echo "    \${PROJECT_ROOT}  - Project root directory"
+            echo "    \${EDITOR}        - Your editor"
+            exit 1
+            ;;
+        *)
+            log_error "Unknown template command: $subcmd"
+            exit 1
+            ;;
+    esac
+}
+
 ## Layout command
 cmd_layout() {
     local layout_name=""
@@ -941,6 +1021,9 @@ parse_args() {
             ;;
         session)
             cmd_session "$@"
+            ;;
+        template)
+            cmd_template "$@"
             ;;
         layout)
             cmd_layout "$@"
