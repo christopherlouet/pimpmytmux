@@ -353,7 +353,7 @@ tmux
 
 ```
 pimpmytmux status
-Version:    v1.0.0
+Version:    v1.0.1
 Platform:   linux
 tmux:       tmux 3.4
 Config:     ~/.config/pimpmytmux/pimpmytmux.yaml

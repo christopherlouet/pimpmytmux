@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-01-24
+
+### Changed
+- **Documentation**: Complete update for v1.0.0 features
+  - README.md: Added all new commands (template, profile, sync, plugin, detect, migrate, backup)
+  - INSTALL.md: Updated version number to v1.0.0
+  - USAGE.md: Added comprehensive sections for all new features
+    - Session Templates with YAML format examples
+    - Profiles management guide
+    - Project Detection with supported types
+    - Git Sync workflow
+    - Plugins usage and hooks
+    - Backup and Migration guide
+    - Conditional Keybindings with examples
+  - Reorganized Commands Reference into logical groups
+
 ## [1.0.0] - 2026-01-24
 
 ### Added
