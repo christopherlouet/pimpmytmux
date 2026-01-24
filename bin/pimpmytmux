@@ -8,8 +8,14 @@ set -euo pipefail
 # Initialization
 # -----------------------------------------------------------------------------
 
-# Determine the script location and project root
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Determine the script location and project root (resolve symlinks)
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [[ -L "$SCRIPT_PATH" ]]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 export PIMPMYTMUX_ROOT="${PIMPMYTMUX_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 export PIMPMYTMUX_LIB_DIR="${PIMPMYTMUX_ROOT}/lib"
 
