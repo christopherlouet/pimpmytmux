@@ -12,7 +12,7 @@ set -euo pipefail
 # Constants
 # -----------------------------------------------------------------------------
 
-PIMPMYTMUX_VERSION="${PIMPMYTMUX_VERSION:-0.2.0}"
+PIMPMYTMUX_VERSION="${PIMPMYTMUX_VERSION:-0.4.0}"
 PIMPMYTMUX_CONFIG_DIR="${PIMPMYTMUX_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/pimpmytmux}"
 PIMPMYTMUX_DATA_DIR="${PIMPMYTMUX_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/pimpmytmux}"
 PIMPMYTMUX_CACHE_DIR="${PIMPMYTMUX_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/pimpmytmux}"
@@ -518,6 +518,47 @@ reload_tmux() {
 
     tmux source-file "$conf_path"
     log_success "Reloaded tmux configuration"
+}
+
+## Send a notification to tmux status line
+## Usage: tmux_notify "message" [type] [duration_ms]
+## Types: success, error, info, warn
+## Duration: milliseconds to display (default: 3000)
+tmux_notify() {
+    local message="$1"
+    local type="${2:-info}"
+    local duration="${3:-3000}"
+
+    # Check if notifications are disabled
+    if [[ "${PIMPMYTMUX_NOTIFICATIONS:-true}" == "false" ]]; then
+        log_debug "Notifications disabled, skipping"
+        return 0
+    fi
+
+    # Only show if inside tmux
+    if ! is_inside_tmux; then
+        return 0
+    fi
+
+    # Color based on type
+    local style
+    case "$type" in
+        success) style="bg=green,fg=black" ;;
+        error)   style="bg=red,fg=white" ;;
+        warn)    style="bg=yellow,fg=black" ;;
+        *)       style="bg=blue,fg=white" ;;
+    esac
+
+    # Save current message settings
+    local old_display_time
+    old_display_time=$(tmux show-options -gv display-time 2>/dev/null || echo "750")
+
+    # Set temporary display time and show message
+    tmux set-option -g display-time "$duration" 2>/dev/null || true
+    tmux display-message -d "$duration" "#[${style}] pimpmytmux: ${message} #[default]" 2>/dev/null || true
+
+    # Restore original display time (in background to not block)
+    (sleep 0.1 && tmux set-option -g display-time "$old_display_time" 2>/dev/null) &
 }
 
 # -----------------------------------------------------------------------------

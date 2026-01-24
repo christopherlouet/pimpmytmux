@@ -26,6 +26,8 @@ source "${PIMPMYTMUX_LIB_DIR}/core.sh"
 load_lib "config" "required"
 load_lib "validation" "optional"
 load_lib "backup" "optional"
+load_lib "preview" "optional"
+load_lib "gallery" "optional"
 load_lib "wizard" "optional"
 
 # Load session modules (optional)
@@ -58,13 +60,13 @@ ${BOLD}USAGE:${RESET}
 ${BOLD}COMMANDS:${RESET}
     apply           Generate and apply tmux configuration
     reload          Reload tmux configuration (inside tmux)
-    theme <name>    Switch to a different theme
-    themes          List available themes
+    theme <name>    Switch to a different theme (--preview to preview)
+    themes          List available themes (--gallery for visual)
     session <cmd>   Session management (save, restore, list)
-    layout <name>   Apply a predefined layout
+    layout <name>   Apply a predefined layout (--preview to preview)
     layouts         List available layouts
     zen [on|off]    Toggle zen mode (hide status bar + borders)
-    backup <cmd>    Backup management (list, restore)
+    backup <cmd>    Backup management (list, restore, create, cleanup)
     edit            Open configuration file in editor
     check           Validate configuration file
     status          Show current pimpmytmux status
@@ -80,6 +82,7 @@ ${BOLD}OPTIONS:${RESET}
     -d, --debug            Enable debug output
     --dry-run              Show what would be done without doing it
     --no-backup            Skip automatic backup before apply
+    --no-notifications     Disable tmux status bar notifications
     -q, --quiet            Suppress non-error output
     -h, --help             Show help for a command
 
@@ -176,9 +179,44 @@ cmd_apply() {
     fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        log_info "Dry run - generated config:"
-        cat "$temp_file"
+        log_info "Dry run mode - showing changes"
+        echo ""
+
+        local current_conf
+        current_conf=$(get_tmux_conf_path)
+
+        if [[ -f "$current_conf" ]]; then
+            # Show colored diff
+            if check_command preview_tmux_conf_diff; then
+                preview_tmux_conf_diff "$temp_file"
+                echo ""
+            fi
+
+            echo -e "${BOLD}Configuration diff:${RESET}"
+            echo ""
+
+            # Show diff with colors
+            if check_command colordiff; then
+                diff -u "$current_conf" "$temp_file" | colordiff || true
+            else
+                diff -u "$current_conf" "$temp_file" 2>/dev/null | while IFS= read -r line; do
+                    case "$line" in
+                        +*) echo -e "${GREEN}${line}${RESET}" ;;
+                        -*) echo -e "${RED}${line}${RESET}" ;;
+                        @*) echo -e "${CYAN}${line}${RESET}" ;;
+                        *)  echo "$line" ;;
+                    esac
+                done || true
+            fi
+        else
+            echo -e "${BOLD}New configuration (no existing tmux.conf):${RESET}"
+            echo ""
+            cat "$temp_file"
+        fi
+
         rm -f "$temp_file"
+        echo ""
+        log_info "Run 'pimpmytmux apply' to apply these changes"
         return 0
     fi
 
@@ -221,6 +259,7 @@ cmd_apply() {
     # Reload if inside tmux
     if is_inside_tmux; then
         reload_tmux
+        tmux_notify "Configuration applied!" "success"
     else
         log_info "Not inside tmux. Start tmux to use the new configuration."
     fi
@@ -236,15 +275,31 @@ cmd_reload() {
     fi
 
     reload_tmux
+    tmux_notify "Configuration reloaded!" "success"
 }
 
 ## Switch theme
 cmd_theme() {
-    local theme_name="${1:-}"
+    local theme_name=""
+    local preview_mode=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --preview|-p)
+                preview_mode=true
+                shift
+                ;;
+            *)
+                theme_name="$1"
+                shift
+                ;;
+        esac
+    done
 
     if [[ -z "$theme_name" ]]; then
         log_error "Theme name required"
-        log_info "Usage: pimpmytmux theme <name>"
+        log_info "Usage: pimpmytmux theme <name> [--preview]"
         log_info "Run 'pimpmytmux themes' to list available themes"
         exit 1
     fi
@@ -255,6 +310,17 @@ cmd_theme() {
         log_error "Theme not found: $theme_name"
         log_info "Run 'pimpmytmux themes' to list available themes"
         exit 1
+    fi
+
+    # Preview mode - just show theme preview
+    if [[ "$preview_mode" == "true" ]]; then
+        if check_command preview_theme; then
+            preview_theme "$theme_name"
+        else
+            log_error "Preview not available (lib/preview.sh not loaded)"
+            exit 1
+        fi
+        return 0
     fi
 
     # Update config file to use new theme
@@ -282,6 +348,47 @@ cmd_theme() {
 
 ## List available themes
 cmd_themes() {
+    local gallery_mode=false
+    local interactive_mode=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --gallery|-g)
+                gallery_mode=true
+                shift
+                ;;
+            --interactive|-i)
+                interactive_mode=true
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
+    # Interactive mode with gum
+    if [[ "$interactive_mode" == "true" ]]; then
+        if check_command select_theme_interactive; then
+            select_theme_interactive
+        else
+            log_warn "Gallery module not loaded"
+            gallery_mode=true
+        fi
+    fi
+
+    # Gallery mode
+    if [[ "$gallery_mode" == "true" ]]; then
+        if check_command show_gallery; then
+            show_gallery
+        else
+            log_warn "Gallery not available, showing simple list"
+        fi
+        return 0
+    fi
+
+    # Default: simple list
     echo -e "${BOLD}Available themes:${RESET}"
     echo ""
 
@@ -311,6 +418,7 @@ cmd_themes() {
 
     echo ""
     echo "Switch theme with: pimpmytmux theme <name>"
+    echo "Show gallery with: pimpmytmux themes --gallery"
 }
 
 ## Edit configuration
@@ -523,13 +631,39 @@ cmd_session() {
 
 ## Layout command
 cmd_layout() {
-    local layout_name="${1:-}"
+    local layout_name=""
+    local preview_mode=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --preview|-p)
+                preview_mode=true
+                shift
+                ;;
+            *)
+                layout_name="$1"
+                shift
+                ;;
+        esac
+    done
 
     if [[ -z "$layout_name" ]]; then
         log_error "Layout name required"
-        log_info "Usage: pimpmytmux layout <name>"
+        log_info "Usage: pimpmytmux layout <name> [--preview]"
         log_info "Run 'pimpmytmux layouts' to list available layouts"
         exit 1
+    fi
+
+    # Preview mode - just show layout preview
+    if [[ "$preview_mode" == "true" ]]; then
+        if check_command preview_layout; then
+            preview_layout "$layout_name"
+        else
+            log_error "Preview not available (lib/preview.sh not loaded)"
+            exit 1
+        fi
+        return 0
     fi
 
     if ! is_inside_tmux; then
@@ -612,6 +746,10 @@ parse_args() {
                 ;;
             --no-backup)
                 NO_BACKUP=true
+                shift
+                ;;
+            --no-notifications)
+                PIMPMYTMUX_NOTIFICATIONS=false
                 shift
                 ;;
             -h|--help)

@@ -114,11 +114,13 @@ zen_toggle() {
             tmux set -g pane-border-status off 2>/dev/null || true
             tmux set -g pane-border-lines hidden 2>/dev/null || true
             log_success "Zen mode enabled"
+            # Note: notification won't show since status bar is off
             ;;
         off|false|0)
             tmux set -g status on 2>/dev/null || true
             tmux set -g pane-border-lines single 2>/dev/null || true
             log_success "Zen mode disabled"
+            tmux_notify "Zen mode disabled" "info"
             ;;
         *)
             log_error "Invalid action: $action (use on/off)"

@@ -317,3 +317,43 @@ setup() {
     run list_loaded_modules
     assert_success
 }
+
+# -----------------------------------------------------------------------------
+# Notification tests
+# -----------------------------------------------------------------------------
+
+@test "tmux_notify skips when not inside tmux" {
+    unset TMUX
+    run tmux_notify "Test message" "success"
+    assert_success
+    # Should return silently without error
+}
+
+@test "tmux_notify skips when notifications are disabled" {
+    export PIMPMYTMUX_NOTIFICATIONS="false"
+    run tmux_notify "Test message" "success"
+    assert_success
+    # Should return without running tmux commands
+    unset PIMPMYTMUX_NOTIFICATIONS
+}
+
+@test "tmux_notify handles all message types" {
+    # Mock tmux command
+    function tmux() { return 0; }
+    export -f tmux
+    export TMUX="/tmp/tmux-test"
+
+    run tmux_notify "Success message" "success"
+    assert_success
+
+    run tmux_notify "Error message" "error"
+    assert_success
+
+    run tmux_notify "Warning message" "warn"
+    assert_success
+
+    run tmux_notify "Info message" "info"
+    assert_success
+
+    unset TMUX
+}

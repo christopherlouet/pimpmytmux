@@ -520,6 +520,120 @@ backup_existing() {
 }
 
 # -----------------------------------------------------------------------------
+# Shell Completions
+# -----------------------------------------------------------------------------
+
+## Detect user's shell
+detect_shell() {
+    local shell_name
+    shell_name=$(basename "${SHELL:-/bin/bash}")
+    echo "$shell_name"
+}
+
+## Install shell completions
+install_completions() {
+    local user_shell
+    user_shell=$(detect_shell)
+    local completions_dir="${PIMPMYTMUX_INSTALL_DIR}/completions"
+
+    echo ""
+    info "Setting up shell completions..."
+
+    case "$user_shell" in
+        bash)
+            install_bash_completion
+            ;;
+        zsh)
+            install_zsh_completion
+            ;;
+        fish)
+            install_fish_completion
+            ;;
+        *)
+            info "Shell completions available in ${completions_dir}"
+            ;;
+    esac
+}
+
+## Install Bash completion
+install_bash_completion() {
+    local completions_dir="${PIMPMYTMUX_INSTALL_DIR}/completions"
+    local bash_completion_file="${completions_dir}/pimpmytmux.bash"
+
+    if [[ ! -f "$bash_completion_file" ]]; then
+        warn "Bash completion file not found"
+        return 1
+    fi
+
+    # Try system-wide first
+    local system_dir="/etc/bash_completion.d"
+    local user_dir="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions"
+
+    if [[ -d "$system_dir" ]] && [[ -w "$system_dir" ]]; then
+        cp "$bash_completion_file" "${system_dir}/pimpmytmux"
+        success "Installed Bash completion to $system_dir"
+    elif [[ -d "$system_dir" ]] && confirm "Install Bash completion system-wide (requires sudo)?"; then
+        sudo cp "$bash_completion_file" "${system_dir}/pimpmytmux"
+        success "Installed Bash completion to $system_dir"
+    else
+        # Install to user directory
+        mkdir -p "$user_dir"
+        cp "$bash_completion_file" "${user_dir}/pimpmytmux"
+        success "Installed Bash completion to $user_dir"
+
+        # Check if user needs to source it
+        if ! grep -q "bash-completion" ~/.bashrc 2>/dev/null; then
+            echo ""
+            info "Add this to your ~/.bashrc to enable completions:"
+            echo "  source ${user_dir}/pimpmytmux"
+        fi
+    fi
+}
+
+## Install Zsh completion
+install_zsh_completion() {
+    local completions_dir="${PIMPMYTMUX_INSTALL_DIR}/completions"
+    local zsh_completion_file="${completions_dir}/pimpmytmux.zsh"
+
+    if [[ ! -f "$zsh_completion_file" ]]; then
+        warn "Zsh completion file not found"
+        return 1
+    fi
+
+    # Common Zsh completion directories
+    local user_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/site-functions"
+    local zsh_fpath_dir="$HOME/.zsh/completions"
+
+    # Create and use user directory
+    mkdir -p "$user_dir"
+    cp "$zsh_completion_file" "${user_dir}/_pimpmytmux"
+    success "Installed Zsh completion to $user_dir"
+
+    # Check if user needs to add to fpath
+    if ! grep -q "$user_dir" ~/.zshrc 2>/dev/null; then
+        echo ""
+        info "Add this to your ~/.zshrc (before compinit):"
+        echo "  fpath=(${user_dir} \$fpath)"
+        echo "  autoload -Uz compinit && compinit"
+    fi
+}
+
+## Install Fish completion
+install_fish_completion() {
+    local completions_dir="${PIMPMYTMUX_INSTALL_DIR}/completions"
+    local fish_completion_dir="${XDG_CONFIG_HOME:-$HOME/.config}/fish/completions"
+
+    # Fish completions are not yet implemented
+    if [[ -f "${completions_dir}/pimpmytmux.fish" ]]; then
+        mkdir -p "$fish_completion_dir"
+        cp "${completions_dir}/pimpmytmux.fish" "${fish_completion_dir}/pimpmytmux.fish"
+        success "Installed Fish completion"
+    else
+        info "Fish completions will be available in a future version"
+    fi
+}
+
+# -----------------------------------------------------------------------------
 # Installation
 # -----------------------------------------------------------------------------
 
@@ -598,6 +712,9 @@ EOF
     chmod +x "${PIMPMYTMUX_INSTALL_DIR}/bin/pimpmytmux"
     ln -sf "${PIMPMYTMUX_INSTALL_DIR}/bin/pimpmytmux" "${PIMPMYTMUX_BIN_DIR}/pimpmytmux"
     success "CLI available at ${PIMPMYTMUX_BIN_DIR}/pimpmytmux"
+
+    # Install shell completions
+    install_completions
 
     # Copy example config if not exists
     if [[ ! -f "${PIMPMYTMUX_CONFIG_DIR}/pimpmytmux.yaml" ]]; then
