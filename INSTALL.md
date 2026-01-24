@@ -38,7 +38,7 @@ This guide provides step-by-step instructions to install pimpmytmux on your syst
 For experienced users, run this one-liner:
 
 ```bash
-git clone https://github.com/christopherlouet/pimpmytmux.git ~/.config/pimpmytmux && cd ~/.config/pimpmytmux && ./install.sh
+git clone https://github.com/christopherlouet/pimpmytmux.git && cd pimpmytmux && ./install.sh
 ```
 
 Or with curl:
@@ -46,6 +46,14 @@ Or with curl:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/christopherlouet/pimpmytmux/main/install.sh | bash
 ```
+
+The installer will:
+1. Check and install required dependencies (tmux, git)
+2. Optionally install recommended dependencies (yq, fzf, gum, jq)
+3. Backup any existing tmux configuration
+4. Install pimpmytmux to `~/.pimpmytmux`
+5. Create configuration directory at `~/.config/pimpmytmux`
+6. Set up the CLI at `~/.local/bin/pimpmytmux`
 
 ---
 
@@ -88,10 +96,12 @@ sudo apt install -y gum
 **Step 4: Install pimpmytmux**
 
 ```bash
-git clone https://github.com/christopherlouet/pimpmytmux.git ~/.config/pimpmytmux
-cd ~/.config/pimpmytmux
+git clone https://github.com/christopherlouet/pimpmytmux.git
+cd pimpmytmux
 ./install.sh
 ```
+
+The installer will offer to install optional dependencies interactively.
 
 **Step 5: Add to PATH (if not already done)**
 
@@ -137,10 +147,12 @@ sudo chmod +x /usr/local/bin/gum
 **Step 4: Install pimpmytmux**
 
 ```bash
-git clone https://github.com/christopherlouet/pimpmytmux.git ~/.config/pimpmytmux
-cd ~/.config/pimpmytmux
+git clone https://github.com/christopherlouet/pimpmytmux.git
+cd pimpmytmux
 ./install.sh
 ```
+
+The installer will offer to install optional dependencies interactively.
 
 **Step 5: Add to PATH**
 
@@ -169,8 +181,8 @@ yay -S gum
 **Step 2: Install pimpmytmux**
 
 ```bash
-git clone https://github.com/christopherlouet/pimpmytmux.git ~/.config/pimpmytmux
-cd ~/.config/pimpmytmux
+git clone https://github.com/christopherlouet/pimpmytmux.git
+cd pimpmytmux
 ./install.sh
 ```
 
@@ -200,8 +212,8 @@ brew install tmux git fzf yq gum jq
 **Step 3: Install pimpmytmux**
 
 ```bash
-git clone https://github.com/christopherlouet/pimpmytmux.git ~/.config/pimpmytmux
-cd ~/.config/pimpmytmux
+git clone https://github.com/christopherlouet/pimpmytmux.git
+cd pimpmytmux
 ./install.sh
 ```
 
@@ -318,6 +330,9 @@ pimpmytmux check
 # List available themes
 pimpmytmux themes
 
+# List available layouts
+pimpmytmux layouts
+
 # Start tmux with your new config
 tmux
 ```
@@ -325,10 +340,18 @@ tmux
 **Expected output after `pimpmytmux status`:**
 
 ```
-pimpmytmux v0.1.0
-Config: ~/.config/pimpmytmux/pimpmytmux.yaml
-Theme: cyberpunk
-Modules: sessions, navigation, devtools, monitoring
+pimpmytmux status
+Version:    v0.2.0
+Platform:   linux
+tmux:       tmux 3.4
+Config:     ~/.config/pimpmytmux/pimpmytmux.yaml
+Generated:  ~/.config/pimpmytmux/tmux.conf
+Session:    outside tmux
+
+Dependencies:
+  + yq
+  + fzf
+  - gum (optional)
 ```
 
 ---
@@ -343,9 +366,10 @@ git pull
 pimpmytmux apply
 ```
 
-Or reinstall:
+Or re-run the installer from the installation directory:
 
 ```bash
+cd ~/.pimpmytmux
 ./install.sh
 ```
 
@@ -356,17 +380,18 @@ Or reinstall:
 To remove pimpmytmux:
 
 ```bash
-cd ~/.config/pimpmytmux
+cd ~/.pimpmytmux
 ./install.sh uninstall
 ```
 
 To completely remove all files:
 
 ```bash
+cd ~/.pimpmytmux
 ./install.sh uninstall
+rm -rf ~/.pimpmytmux
 rm -rf ~/.config/pimpmytmux
 rm -rf ~/.local/share/pimpmytmux
-rm -rf ~/.pimpmytmux
 ```
 
 ---
@@ -496,3 +521,15 @@ Now that pimpmytmux is installed, see the [Usage Guide](USAGE.md) to learn how t
 - Use themes and layouts
 - Manage sessions
 - Customize keybindings
+
+Or run the interactive wizard:
+
+```bash
+pimpmytmux wizard
+```
+
+Or quick setup with defaults:
+
+```bash
+pimpmytmux setup
+```

@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2025-01-24
+## [0.2.0] - 2026-01-24
 
 ### Added
 - **INSTALL.md**: Comprehensive installation guide with platform-specific instructions
@@ -33,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added reference to USAGE.md in Configuration section
   - Added new Documentation section with guides table
   - Fixed license reference (GPL v3.0)
+- **INSTALL.md**: Updated to reflect current installer behavior
+  - Fixed installation paths (`~/.pimpmytmux` instead of `~/.config/pimpmytmux`)
+  - Updated `pimpmytmux status` expected output format
+  - Added `pimpmytmux layouts` command
+  - Added `pimpmytmux wizard` and `pimpmytmux setup` commands
+  - Documented interactive dependency installation feature
 
 ## [0.1.0] - 2025-01-24
 
