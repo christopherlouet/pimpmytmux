@@ -10,7 +10,10 @@ _pimpmytmux_completions() {
     _init_completion || return
 
     # Main commands
-    local commands="apply reload theme themes session layout layouts zen backup edit check status init wizard setup help version"
+    local commands="apply reload theme themes profile session layout layouts zen backup edit check status init wizard setup help version"
+
+    # Profile subcommands
+    local profile_cmds="list switch create delete"
 
     # Session subcommands
     local session_cmds="save restore list"
@@ -50,6 +53,16 @@ _pimpmytmux_completions() {
         fi
     }
 
+    # Get available profiles
+    _pimpmytmux_profiles() {
+        local profiles_dir="${PIMPMYTMUX_CONFIG_DIR:-$HOME/.config/pimpmytmux}/profiles"
+        if [[ -d "$profiles_dir" ]]; then
+            for dir in "$profiles_dir"/*/; do
+                [[ -d "$dir" ]] && basename "$dir"
+            done | grep -v '^current$' 2>/dev/null
+        fi
+    }
+
     case "${cword}" in
         1)
             # Complete main commands
@@ -80,6 +93,10 @@ _pimpmytmux_completions() {
                 backup)
                     # Complete backup subcommands
                     COMPREPLY=($(compgen -W "$backup_cmds" -- "$cur"))
+                    ;;
+                profile)
+                    # Complete profile subcommands
+                    COMPREPLY=($(compgen -W "$profile_cmds" -- "$cur"))
                     ;;
                 apply)
                     # Complete apply options
@@ -119,6 +136,18 @@ _pimpmytmux_completions() {
                         cleanup)
                             # Suggest common cleanup numbers
                             COMPREPLY=($(compgen -W "3 5 10" -- "$cur"))
+                            ;;
+                    esac
+                    ;;
+                profile)
+                    case "$subcmd" in
+                        switch|delete)
+                            # Complete profile names
+                            COMPREPLY=($(compgen -W "$(_pimpmytmux_profiles)" -- "$cur"))
+                            ;;
+                        create)
+                            # Just suggest a name placeholder
+                            COMPREPLY=()
                             ;;
                     esac
                     ;;

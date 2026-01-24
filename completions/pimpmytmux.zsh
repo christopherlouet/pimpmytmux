@@ -36,6 +36,19 @@ _pimpmytmux_backups() {
     fi
 }
 
+_pimpmytmux_profiles() {
+    local profiles_dir="${PIMPMYTMUX_CONFIG_DIR:-$HOME/.config/pimpmytmux}/profiles"
+    if [[ -d "$profiles_dir" ]]; then
+        local profiles=()
+        for dir in "$profiles_dir"/*/; do
+            [[ -d "$dir" ]] && profiles+=("$(basename "$dir")")
+        done
+        # Filter out 'current' symlink
+        profiles=("${(@)profiles:#current}")
+        _describe -t profiles 'profile' profiles
+    fi
+}
+
 _pimpmytmux() {
     local curcontext="$curcontext" state line
     typeset -A opt_args
@@ -60,6 +73,7 @@ _pimpmytmux() {
                 'reload:Reload tmux configuration'
                 'theme:Switch to a different theme'
                 'themes:List available themes'
+                'profile:Profile management'
                 'session:Session management'
                 'layout:Apply a predefined layout'
                 'layouts:List available layouts'
@@ -94,6 +108,42 @@ _pimpmytmux() {
                         '--interactive:Interactive theme selection'
                     )
                     _describe -t options 'option' opts
+                    ;;
+
+                profile)
+                    if (( CURRENT == 3 )); then
+                        local subcmds=(
+                            'list:List available profiles'
+                            'switch:Switch to a profile'
+                            'create:Create a new profile'
+                            'delete:Delete a profile'
+                        )
+                        _describe -t subcommands 'subcommand' subcmds
+                    elif (( CURRENT == 4 )); then
+                        case $words[3] in
+                            switch|delete)
+                                _pimpmytmux_profiles
+                                ;;
+                            create)
+                                _message 'Profile name'
+                                ;;
+                        esac
+                    elif (( CURRENT == 5 )); then
+                        case $words[3] in
+                            create)
+                                local opts=('--from:Copy from existing profile')
+                                _describe -t options 'option' opts
+                                ;;
+                        esac
+                    elif (( CURRENT == 6 )); then
+                        case $words[3] in
+                            create)
+                                if [[ "$words[5]" == "--from" ]]; then
+                                    _pimpmytmux_profiles
+                                fi
+                                ;;
+                        esac
+                    fi
                     ;;
 
                 session)

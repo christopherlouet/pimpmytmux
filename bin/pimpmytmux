@@ -28,6 +28,7 @@ load_lib "validation" "optional"
 load_lib "backup" "optional"
 load_lib "preview" "optional"
 load_lib "gallery" "optional"
+load_lib "profiles" "optional"
 load_lib "wizard" "optional"
 
 # Load session modules (optional)
@@ -62,6 +63,7 @@ ${BOLD}COMMANDS:${RESET}
     reload          Reload tmux configuration (inside tmux)
     theme <name>    Switch to a different theme (--preview to preview)
     themes          List available themes (--gallery for visual)
+    profile <cmd>   Profile management (list, switch, create, delete)
     session <cmd>   Session management (save, restore, list)
     layout <name>   Apply a predefined layout (--preview to preview)
     layouts         List available layouts
@@ -580,6 +582,96 @@ cmd_backup() {
     esac
 }
 
+## Profile management command
+cmd_profile() {
+    local subcmd="${1:-}"
+    shift || true
+
+    # Initialize profiles if needed
+    if check_command init_profiles; then
+        init_profiles
+    fi
+
+    case "$subcmd" in
+        list)
+            local current
+            current=$(get_current_profile 2>/dev/null || echo "default")
+            echo -e "${BOLD}Available profiles:${RESET}"
+            echo ""
+            while IFS= read -r profile; do
+                if [[ -n "$profile" ]]; then
+                    if [[ "$profile" == "$current" ]]; then
+                        echo -e "  ${GREEN}* $profile${RESET} (current)"
+                    else
+                        echo "    $profile"
+                    fi
+                fi
+            done < <(list_profiles)
+            echo ""
+            ;;
+        switch)
+            local name="${1:-}"
+            if [[ -z "$name" ]]; then
+                log_error "Profile name required"
+                log_info "Usage: pimpmytmux profile switch <name>"
+                exit 1
+            fi
+            switch_profile "$name"
+            # Re-apply configuration with new profile
+            log_info "Re-applying configuration with profile: $name"
+            PIMPMYTMUX_CONFIG_FILE=$(get_active_config_path)
+            cmd_apply
+            ;;
+        create)
+            local name="${1:-}"
+            shift || true
+            if [[ -z "$name" ]]; then
+                log_error "Profile name required"
+                log_info "Usage: pimpmytmux profile create <name> [--from <source>]"
+                exit 1
+            fi
+            create_profile "$name" "$@"
+            ;;
+        delete)
+            local name="${1:-}"
+            if [[ -z "$name" ]]; then
+                log_error "Profile name required"
+                log_info "Usage: pimpmytmux profile delete <name>"
+                exit 1
+            fi
+            # Confirm deletion
+            echo -n "Delete profile '$name'? [y/N] "
+            read -r confirm
+            if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                delete_profile "$name"
+            else
+                log_info "Cancelled"
+            fi
+            ;;
+        "")
+            log_error "Subcommand required"
+            echo ""
+            echo "Usage: pimpmytmux profile <command>"
+            echo ""
+            echo "Commands:"
+            echo "    list                    List available profiles"
+            echo "    switch <name>           Switch to a profile"
+            echo "    create <name> [--from]  Create a new profile"
+            echo "    delete <name>           Delete a profile"
+            echo ""
+            echo "Examples:"
+            echo "    pimpmytmux profile list"
+            echo "    pimpmytmux profile create work --from default"
+            echo "    pimpmytmux profile switch work"
+            exit 1
+            ;;
+        *)
+            log_error "Unknown profile command: $subcmd"
+            exit 1
+            ;;
+    esac
+}
+
 ## Session management command
 cmd_session() {
     local subcmd="${1:-}"
@@ -794,6 +886,9 @@ parse_args() {
             ;;
         themes|list-themes)
             cmd_themes "$@"
+            ;;
+        profile)
+            cmd_profile "$@"
             ;;
         session)
             cmd_session "$@"

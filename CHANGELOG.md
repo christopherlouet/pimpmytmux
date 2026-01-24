@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-24
+
+### Added
+- **Preview system** (`lib/preview.sh`): Theme and layout preview before applying
+  - `pimpmytmux theme <name> --preview`: Preview theme colors and palette
+  - `pimpmytmux layout <name> --preview`: Preview layout with ASCII diagram
+  - True color ANSI support for accurate color display
+- **Theme gallery** (`lib/gallery.sh`): Visual theme browser
+  - `pimpmytmux themes --gallery`: Display all themes with color swatches
+  - `pimpmytmux themes --interactive`: Interactive theme selection (requires gum)
+  - Theme cards with background, accent colors and descriptions
+- **Shell completions**: Full tab-completion support
+  - Bash completion (`completions/pimpmytmux.bash`)
+  - Zsh completion with descriptions (`completions/pimpmytmux.zsh`)
+  - Dynamic completion for themes, layouts, sessions, backups
+  - Automatic installation via `install.sh`
+- **tmux notifications**: Status bar feedback after operations
+  - Success/error/warning/info message styles
+  - `--no-notifications` flag to disable
+  - `PIMPMYTMUX_NOTIFICATIONS=false` environment variable
+
+### Changed
+- **Dry-run improved**: Colored diff output showing changes
+  - Green for additions, red for removals, cyan for context
+  - Line count summary
+  - Fallback coloring when colordiff unavailable
+
+## [0.3.0] - 2026-01-24
+
+### Added
+- **Config validation** (`lib/validation.sh`): Validate tmux config before applying
+  - `validate_tmux_syntax()`: Check syntax via tmux source-file
+  - `get_validation_errors()`: Parse and display tmux errors
+  - `validate_before_apply()`: Integrated validation workflow
+- **Backup system** (`lib/backup.sh`): Automatic backup before changes
+  - `backup_config()`: Timestamped backup creation
+  - `restore_backup()`: Restore from any backup
+  - `list_backups()`: Show available backups
+  - `cleanup_old_backups()`: Keep only N most recent
+  - `pimpmytmux backup list/restore/create/cleanup` commands
+- **Enhanced error messages**: Actionable error feedback
+  - `error_with_suggestion()`: Error with recommended action
+  - `log_error_detail()`: Structured error with context
+  - `log_error_box()`: Boxed error for visibility
+- **Module system**: Explicit module loading with debugging
+  - `load_module()`: Controlled module loading with validation
+  - `--debug` flag shows loaded modules
+  - Tracking of loaded modules to prevent re-sourcing
+
+### Changed
+- **yq required**: Removed grep fallback for YAML parsing
+  - Clear error message with installation instructions
+  - `require_yq()` function for dependency check
+- **Apply workflow**: Validate → Backup → Apply
+  - Config validation before writing
+  - Automatic backup (disable with `--no-backup`)
+  - Rollback on validation failure
+
 ## [0.2.1] - 2026-01-24
 
 ### Changed

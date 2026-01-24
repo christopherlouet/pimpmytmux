@@ -71,6 +71,21 @@ assert_output_equals() {
     fi
 }
 
+# Alias for assert_output_equals
+assert_output() {
+    assert_output_equals "$1"
+}
+
+# Assert output does NOT contain a string
+refute_output_contains() {
+    local unexpected="$1"
+    if [[ "$output" == *"$unexpected"* ]]; then
+        echo "Expected output NOT to contain: $unexpected"
+        echo "Actual output: $output"
+        return 1
+    fi
+}
+
 # Assert a file exists
 assert_file_exists() {
     local file="$1"
