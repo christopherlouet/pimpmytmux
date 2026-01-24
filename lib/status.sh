@@ -213,7 +213,7 @@ EOF
     local right_parts='%H:%M %d-%b'
 
     if [[ "$git_enabled" == "true" ]]; then
-        right_parts="#(\${@git_script}) | ${right_parts}"
+        right_parts="#(#{@git_script}) | ${right_parts}"
     fi
 
     if [[ "$monitoring_enabled" == "true" ]]; then
@@ -224,15 +224,15 @@ EOF
         local monitoring_part=""
 
         if [[ "$components" == *"cpu"* ]]; then
-            monitoring_part+='#(${@cpu_script}) '
+            monitoring_part+='#(#{@cpu_script}) '
         fi
 
         if [[ "$components" == *"memory"* ]]; then
-            monitoring_part+='#(${@memory_script}) '
+            monitoring_part+='#(#{@memory_script}) '
         fi
 
         if [[ "$components" == *"battery"* ]]; then
-            monitoring_part+='#(${@battery_script}) '
+            monitoring_part+='#(#{@battery_script}) '
         fi
 
         if [[ -n "$monitoring_part" ]]; then
