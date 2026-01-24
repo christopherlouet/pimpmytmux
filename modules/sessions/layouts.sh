@@ -245,21 +245,25 @@ apply_layout_monitoring() {
     base_pane=$(tmux display-message -p '#{pane_id}')
 
     # Create 2x2 grid and send commands immediately after each split
-    # Pane 0 (current): top-left - btop (fallback to htop, then top)
-    tmux send-keys -t "$base_pane" "btop 2>/dev/null || htop 2>/dev/null || top" Enter
+    # Pane 0 (current): top-left - htop (fallback to top)
+    tmux send-keys -t "$base_pane" "htop 2>/dev/null || top" Enter
 
     # Split right: top-right - disk/memory stats (duf preferred, fallback to df)
+    # Use while loop for TTY (colors), cursor home + clear-to-end to avoid flash
+    # Hide snap/squashfs bind mounts with --hide-mp
+    # Colorize free output: header=cyan, Mem=green, Swap=magenta
     tmux split-window -h -c "$cwd"
-    tmux send-keys "duf 2>/dev/null && watch -n 2 'duf; echo; free -h' || watch -n 2 'df -h; echo; free -h'" Enter
+    tmux send-keys "command -v duf >/dev/null && { clear; while true; do printf '\\033[H'; duf --only local --hide-mp '/var/snap/*,/snap/*'; echo; free -h | sed -e '1s/.*/\\x1b[1;36m&\\x1b[0m/' -e 's/^Mem:/\\x1b[1;32mMem:\\x1b[0m/' -e 's/^Swap:/\\x1b[1;35mSwap:\\x1b[0m/' -e 's/^Échange:/\\x1b[1;35mÉchange:\\x1b[0m/'; printf '\\033[0J'; sleep 2; done; } || watch -t -n 2 'df -h -x tmpfs -x devtmpfs -x squashfs; echo; free -h'" Enter
 
-    # Split down from top-right: bottom-right - network (netstat preferred for process names)
+    # Split down from top-right: bottom-right - network (colorized ss)
+    # Use \033[H to move cursor home (no flicker) instead of clear
     tmux split-window -v -c "$cwd"
-    tmux send-keys "watch -n 1 'netstat -tulnp 2>/dev/null || ss -tulnp 2>/dev/null || netstat -tuln'" Enter
+    tmux send-keys "clear; while true; do printf '\\033[H\\033[1;36m=== Network Connections ===\\033[0m\\033[K\\n'; ss -tulnp 2>/dev/null | sed 's/LISTEN/\\x1b[32mLISTEN\\x1b[0m/g; s/UNCONN/\\x1b[33mUNCONN\\x1b[0m/g; s/ESTAB/\\x1b[34mESTAB\\x1b[0m/g'; sleep 1; done" Enter
 
-    # Go back to top-left and split down: bottom-left - logs
+    # Go back to top-left and split down: bottom-left - logs (colorized)
     tmux select-pane -t "$base_pane"
     tmux split-window -v -c "$cwd"
-    tmux send-keys "journalctl -f 2>/dev/null || dmesg -w 2>/dev/null || tail -f /var/log/syslog 2>/dev/null || echo 'No log source available'" Enter
+    tmux send-keys "journalctl -f 2>/dev/null | ccze -A 2>/dev/null || journalctl -f 2>/dev/null || tail -f /var/log/syslog" Enter
 
     # Return to top-left (htop)
     tmux select-pane -t "$base_pane"

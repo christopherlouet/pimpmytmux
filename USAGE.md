@@ -331,8 +331,32 @@ pimpmytmux theme mytheme
 |--------|-------------|----------|
 | `dev-fullstack` | Editor (60%) + Terminal + Server | Full-stack development |
 | `dev-api` | Code (70%) + Logs (30%) | API development |
-| `monitoring` | 4-pane grid (htop, disk/memory, logs, network) | System monitoring |
+| `monitoring` | 4-pane grid (htop, duf, logs, network) | System monitoring |
 | `writing` | Single pane + zen mode (closes other panes) | Distraction-free writing |
+
+**Monitoring layout optional dependencies:**
+
+For the best experience with the monitoring layout, install these tools:
+
+```bash
+# Ubuntu/Debian
+sudo apt install htop duf ccze
+
+# Fedora
+sudo dnf install htop duf ccze
+
+# Arch
+sudo pacman -S htop duf ccze
+
+# macOS
+brew install htop duf ccze
+```
+
+| Tool | Pane | Fallback |
+|------|------|----------|
+| htop | Top-left (processes) | top |
+| duf | Top-right (disk usage with colors) | df -h |
+| ccze | Bottom-left (colorized logs) | plain journalctl |
 
 ### Using Layouts
 

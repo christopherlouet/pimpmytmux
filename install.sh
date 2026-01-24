@@ -52,7 +52,7 @@ success() {
 # Configuration
 # -----------------------------------------------------------------------------
 
-PIMPMYTMUX_VERSION="0.2.0"
+PIMPMYTMUX_VERSION="0.2.1"
 PIMPMYTMUX_REPO="https://github.com/christopherlouet/pimpmytmux.git"
 PIMPMYTMUX_INSTALL_DIR="${PIMPMYTMUX_INSTALL_DIR:-$HOME/.pimpmytmux}"
 PIMPMYTMUX_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/pimpmytmux"
@@ -191,6 +191,28 @@ check_dependencies() {
     else
         info "jq not found - optional for session management"
     fi
+
+    # Monitoring layout optional dependencies
+    echo ""
+    info "Checking monitoring layout dependencies..."
+
+    if check_command htop; then
+        success "htop (process monitor)"
+    else
+        info "htop not found - optional for monitoring layout"
+    fi
+
+    if check_command duf; then
+        success "duf (disk usage)"
+    else
+        info "duf not found - optional for colorful disk usage"
+    fi
+
+    if check_command ccze; then
+        success "ccze (log colorizer)"
+    else
+        info "ccze not found - optional for colorized logs"
+    fi
 }
 
 # -----------------------------------------------------------------------------
@@ -328,6 +350,60 @@ install_gum() {
     fi
 }
 
+## Install duf - binary download for Linux, brew for macOS
+install_duf() {
+    local pkg_manager="$1"
+
+    if [[ "$pkg_manager" == "brew" ]]; then
+        brew install duf
+    elif [[ "$pkg_manager" == "apt" ]]; then
+        # Try apt first (available in newer Ubuntu/Debian)
+        if sudo apt-get install -y duf 2>/dev/null; then
+            return 0
+        fi
+        # Fallback to binary download
+        install_duf_binary
+    elif [[ "$pkg_manager" == "pacman" ]]; then
+        sudo pacman -S --noconfirm duf
+    elif [[ "$pkg_manager" == "dnf" ]]; then
+        sudo dnf install -y duf
+    else
+        install_duf_binary
+    fi
+}
+
+## Install duf binary directly
+install_duf_binary() {
+    info "Downloading duf binary..."
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64) arch="amd64" ;;
+        aarch64|arm64) arch="arm64" ;;
+        armv7l) arch="armv7" ;;
+        *) error "Unsupported architecture: $arch"; return 1 ;;
+    esac
+
+    local os="linux"
+    [[ "$PLATFORM" == "macos" ]] && os="darwin"
+
+    local version="0.8.1"
+    local url="https://github.com/muesli/duf/releases/download/v${version}/duf_${version}_${os}_${arch}.tar.gz"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+
+    if curl -fsSL "$url" | tar -xzf - -C "$tmpdir" 2>/dev/null; then
+        sudo mv "${tmpdir}/duf" /usr/local/bin/duf
+        sudo chmod +x /usr/local/bin/duf
+        rm -rf "$tmpdir"
+        success "Installed duf to /usr/local/bin/duf"
+    else
+        rm -rf "$tmpdir"
+        error "Failed to download duf"
+        return 1
+    fi
+}
+
 ## Interactively install optional dependencies
 install_optional_dependencies() {
     local pkg_manager
@@ -349,6 +425,9 @@ install_optional_dependencies() {
     check_command fzf || missing_deps+=("fzf")
     check_command gum || missing_deps+=("gum")
     check_command jq || missing_deps+=("jq")
+    check_command htop || missing_deps+=("htop")
+    check_command duf || missing_deps+=("duf")
+    check_command ccze || missing_deps+=("ccze")
 
     if [[ ${#missing_deps[@]} -eq 0 ]]; then
         success "All optional dependencies are already installed!"
@@ -358,33 +437,41 @@ install_optional_dependencies() {
     echo "The following optional dependencies are missing:"
     for dep in "${missing_deps[@]}"; do
         case "$dep" in
-            yq)  echo "  - ${BOLD}yq${RESET}: Better YAML parsing (recommended)" ;;
-            fzf) echo "  - ${BOLD}fzf${RESET}: Fuzzy finder for session/window switching" ;;
-            gum) echo "  - ${BOLD}gum${RESET}: Interactive wizard UI" ;;
-            jq)  echo "  - ${BOLD}jq${RESET}: JSON parsing for session management" ;;
+            yq)   echo "  - ${BOLD}yq${RESET}: Better YAML parsing (recommended)" ;;
+            fzf)  echo "  - ${BOLD}fzf${RESET}: Fuzzy finder for session/window switching" ;;
+            gum)  echo "  - ${BOLD}gum${RESET}: Interactive wizard UI" ;;
+            jq)   echo "  - ${BOLD}jq${RESET}: JSON parsing for session management" ;;
+            htop) echo "  - ${BOLD}htop${RESET}: Interactive process monitor (monitoring layout)" ;;
+            duf)  echo "  - ${BOLD}duf${RESET}: Colorful disk usage (monitoring layout)" ;;
+            ccze) echo "  - ${BOLD}ccze${RESET}: Log colorizer (monitoring layout)" ;;
         esac
     done
     echo ""
 
     # Ask about each dependency
     for dep in "${missing_deps[@]}"; do
-        local desc install_func
+        local desc
         case "$dep" in
             yq)
                 desc="yq (YAML parser - recommended)"
-                install_func="install_yq"
                 ;;
             fzf)
                 desc="fzf (fuzzy finder)"
-                install_func="install_package fzf"
                 ;;
             gum)
                 desc="gum (interactive UI)"
-                install_func="install_gum"
                 ;;
             jq)
                 desc="jq (JSON parser)"
-                install_func="install_package jq"
+                ;;
+            htop)
+                desc="htop (process monitor)"
+                ;;
+            duf)
+                desc="duf (disk usage)"
+                ;;
+            ccze)
+                desc="ccze (log colorizer)"
                 ;;
         esac
 
@@ -394,6 +481,8 @@ install_optional_dependencies() {
                 install_yq "$pkg_manager" && success "Installed $dep" || warn "Failed to install $dep"
             elif [[ "$dep" == "gum" ]]; then
                 install_gum "$pkg_manager" && success "Installed $dep" || warn "Failed to install $dep"
+            elif [[ "$dep" == "duf" ]]; then
+                install_duf "$pkg_manager" && success "Installed $dep" || warn "Failed to install $dep"
             else
                 install_package "$dep" "$pkg_manager" && success "Installed $dep" || warn "Failed to install $dep"
             fi

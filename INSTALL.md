@@ -305,6 +305,18 @@ export TERM=xterm-256color
 | [jq](https://stedolan.github.io/jq/) | JSON parsing | If you use session save/restore features |
 | Nerd Font | Status bar icons | If you want icons in status bar |
 
+### Monitoring Layout Dependencies
+
+These optional tools enhance the monitoring layout (`pimpmytmux layout monitoring`):
+
+| Dependency | Purpose | Install Command |
+|------------|---------|-----------------|
+| [htop](https://htop.dev/) | Interactive process monitor | `apt install htop` |
+| [duf](https://github.com/muesli/duf) | Colorful disk usage | `apt install duf` |
+| [ccze](https://github.com/corber/ccze) | Log colorizer | `apt install ccze` |
+
+**Without these tools:** The layout will use fallbacks (top, df, plain logs).
+
 **Nerd Font installation:**
 
 1. Download a font from [Nerd Fonts](https://www.nerdfonts.com/font-downloads) (e.g., FiraCode, JetBrains Mono)

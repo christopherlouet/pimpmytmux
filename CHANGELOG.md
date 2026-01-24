@@ -8,9 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.1] - 2026-01-24
 
 ### Changed
-- **Monitoring layout**: Use modern tools by default with graceful fallbacks
-  - `btop` as primary system monitor (fallback: htop → top)
-  - `duf` as primary disk usage tool (fallback: df -h)
+- **Monitoring layout**: Complete overhaul with modern tools and colorful output
+  - `htop` as primary process monitor (fallback: top)
+  - `duf` with colors for disk usage (fallback: df -h), filtered to show only local devices
+  - Colorized `free -h` output (header=cyan, Mem=green, Swap=magenta)
+  - Colorized network connections with `ss` (LISTEN=green, UNCONN=yellow, ESTAB=blue)
+  - Log colorization with `ccze` if available (fallback: plain journalctl)
+  - Flicker-free refresh using cursor positioning instead of screen clear
+
+### Added
+- **Installer**: Optional monitoring dependencies (htop, duf, ccze)
+  - Interactive installation via `./install.sh deps`
+  - `install_duf` function with binary download fallback
+- **Documentation**: Monitoring layout dependencies in INSTALL.md and USAGE.md
 
 ## [0.2.0] - 2026-01-24
 
