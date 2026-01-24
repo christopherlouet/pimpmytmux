@@ -22,6 +22,7 @@ Complete guide to using and configuring pimpmytmux.
 - [Layouts](#layouts)
   - [Available Layouts](#available-layouts)
   - [Using Layouts](#using-layouts)
+- [Zen Mode](#zen-mode)
 - [Session Management](#session-management)
   - [Saving Sessions](#saving-sessions)
   - [Restoring Sessions](#restoring-sessions)
@@ -100,6 +101,7 @@ pimpmytmux apply
 | `pimpmytmux themes` | List all available themes |
 | `pimpmytmux layout <name>` | Apply a predefined layout |
 | `pimpmytmux layouts` | List all available layouts |
+| `pimpmytmux zen [on\|off]` | Toggle zen mode (hide status bar + borders) |
 | `pimpmytmux session save <name>` | Save current session |
 | `pimpmytmux session restore <name>` | Restore a saved session |
 | `pimpmytmux session list` | List all saved sessions |
@@ -329,8 +331,8 @@ pimpmytmux theme mytheme
 |--------|-------------|----------|
 | `dev-fullstack` | Editor (60%) + Terminal + Server | Full-stack development |
 | `dev-api` | Code (70%) + Logs (30%) | API development |
-| `monitoring` | 4-pane grid | System monitoring |
-| `writing` | Single maximized pane | Distraction-free writing |
+| `monitoring` | 4-pane grid (htop, disk/memory, logs, network) | System monitoring |
+| `writing` | Single pane + zen mode (closes other panes) | Distraction-free writing |
 
 ### Using Layouts
 
@@ -340,7 +342,10 @@ pimpmytmux layouts
 
 # Apply a layout
 pimpmytmux layout dev-fullstack
+pimpmytmux layout monitoring
 ```
+
+**Note:** The `writing` layout will ask for confirmation before closing existing panes.
 
 **Layout visualizations:**
 
@@ -361,11 +366,56 @@ dev-api:
 
 monitoring:
 ┌───────────────────┬───────────────────┐
-│      htop         │      stats        │
+│      htop         │   disk / memory   │
 ├───────────────────┼───────────────────┤
 │      logs         │     network       │
 └───────────────────┴───────────────────┘
 ```
+
+---
+
+## Zen Mode
+
+Zen mode provides a distraction-free experience by hiding the status bar and pane borders.
+Unlike layouts, zen mode **only changes visual settings** without affecting your panes.
+
+### Using Zen Mode
+
+```bash
+# Toggle zen mode on/off
+pimpmytmux zen
+
+# Explicitly enable or disable
+pimpmytmux zen on
+pimpmytmux zen off
+```
+
+### Combining Zen Mode with Layouts
+
+You can use zen mode with any layout:
+
+```bash
+# Apply monitoring layout
+pimpmytmux layout monitoring
+
+# Enable zen mode on the 4-pane layout
+pimpmytmux zen on
+
+# Disable zen mode to restore status bar
+pimpmytmux zen off
+```
+
+### Zen Mode vs Writing Layout
+
+| Feature | `pimpmytmux zen` | `pimpmytmux layout writing` |
+|---------|------------------|----------------------------|
+| Hides status bar | Yes | Yes |
+| Hides pane borders | Yes | Yes |
+| Closes other panes | **No** | Yes (with confirmation) |
+| Affects pane layout | No | Yes |
+
+Use `zen` when you want to temporarily hide UI elements on any layout.
+Use `layout writing` when you want a single-pane focused environment.
 
 ---
 
@@ -624,15 +674,25 @@ pimpmytmux layout monitoring
 
 ### Writing Workflow
 
-**Distraction-free writing:**
+**Distraction-free writing (single pane):**
 
 ```bash
-# Start with writing layout
+# Start with writing layout (closes other panes)
 tmux new -s writing
 pimpmytmux layout writing
 
-# Open your editor (vim, nvim, etc.)
+# Open your editor
 nvim mydocument.md
+```
+
+**Zen mode on existing layout:**
+
+```bash
+# Keep your current panes but hide distractions
+pimpmytmux zen on
+
+# When done, restore UI
+pimpmytmux zen off
 ```
 
 ---

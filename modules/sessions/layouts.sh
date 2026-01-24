@@ -8,12 +8,124 @@ _PIMPMYTMUX_LAYOUTS_LOADED=1
 
 # shellcheck source=lib/core.sh
 source "${PIMPMYTMUX_LIB_DIR:-$(dirname "${BASH_SOURCE[0]}")/../../lib}/core.sh"
+# shellcheck source=lib/wizard.sh
+source "${PIMPMYTMUX_LIB_DIR:-$(dirname "${BASH_SOURCE[0]}")/../../lib}/wizard.sh"
+# shellcheck source=lib/config.sh
+source "${PIMPMYTMUX_LIB_DIR:-$(dirname "${BASH_SOURCE[0]}")/../../lib}/config.sh"
 
 # -----------------------------------------------------------------------------
 # Templates directory
 # -----------------------------------------------------------------------------
 
 PIMPMYTMUX_TEMPLATES_DIR="${PIMPMYTMUX_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}/templates"
+
+# -----------------------------------------------------------------------------
+# Layout settings (globals for current layout)
+# -----------------------------------------------------------------------------
+
+LAYOUT_ZEN_MODE="false"
+
+# -----------------------------------------------------------------------------
+# Layout settings functions
+# -----------------------------------------------------------------------------
+
+## Parse settings from a layout YAML file
+## Sets global variable: LAYOUT_ZEN_MODE
+_parse_layout_settings() {
+    local layout_file="$1"
+
+    # Reset to default
+    LAYOUT_ZEN_MODE="false"
+
+    if [[ ! -f "$layout_file" ]]; then
+        return 0
+    fi
+
+    # Extract zen_mode from YAML
+    local zen_mode
+
+    if check_command yq; then
+        zen_mode=$(yq eval '.settings.zen_mode | select(. != null)' "$layout_file" 2>/dev/null)
+    else
+        # Fallback: simple grep-based extraction
+        zen_mode=$(grep -E "^\s*zen_mode:" "$layout_file" 2>/dev/null | head -1 | sed 's/.*zen_mode:[[:space:]]*//' | tr -d ' ')
+    fi
+
+    # Set global (normalize to true/false)
+    if [[ "$zen_mode" == "true" ]]; then
+        LAYOUT_ZEN_MODE="true"
+    else
+        LAYOUT_ZEN_MODE="false"
+    fi
+}
+
+## Confirm layout application when it will close panes
+## Returns: 0 if confirmed or no confirmation needed, 1 if cancelled
+_confirm_layout_apply() {
+    local layout_name="$1"
+    local pane_count
+
+    pane_count=$(tmux display-message -p '#{window_panes}' 2>/dev/null || echo "1")
+
+    if [[ "$pane_count" -gt 1 ]]; then
+        local confirm
+        confirm=$(_wizard_confirm "Layout '$layout_name' will close $((pane_count - 1)) pane(s). Continue?")
+        [[ "$confirm" == "true" ]] && return 0 || return 1
+    fi
+
+    return 0
+}
+
+## Apply layout settings (zen mode)
+## zen_mode: true = hide status bar + hide pane borders (distraction-free)
+_apply_layout_settings() {
+    if [[ "$LAYOUT_ZEN_MODE" == "true" ]]; then
+        # Zen mode: hide everything for distraction-free experience
+        tmux set -g status off 2>/dev/null || true
+        tmux set -g pane-border-status off 2>/dev/null || true
+        tmux set -g pane-border-lines hidden 2>/dev/null || true
+        log_info "Zen mode enabled (status bar and borders hidden)"
+    else
+        # Normal mode: restore status bar and borders
+        tmux set -g status on 2>/dev/null || true
+        tmux set -g pane-border-lines single 2>/dev/null || true
+    fi
+}
+
+## Toggle zen mode (visual only - no pane changes)
+## Usage: zen_toggle [on|off]
+zen_toggle() {
+    local action="${1:-}"
+
+    # Determine current state if no action specified
+    if [[ -z "$action" ]]; then
+        local current_status
+        current_status=$(tmux show -gv status 2>/dev/null || echo "on")
+        if [[ "$current_status" == "off" ]]; then
+            action="off"  # Currently zen, turn it off
+        else
+            action="on"   # Currently normal, turn zen on
+        fi
+    fi
+
+    case "$action" in
+        on|true|1)
+            tmux set -g status off 2>/dev/null || true
+            tmux set -g pane-border-status off 2>/dev/null || true
+            tmux set -g pane-border-lines hidden 2>/dev/null || true
+            log_success "Zen mode enabled"
+            ;;
+        off|false|0)
+            tmux set -g status on 2>/dev/null || true
+            tmux set -g pane-border-lines single 2>/dev/null || true
+            log_success "Zen mode disabled"
+            ;;
+        *)
+            log_error "Invalid action: $action (use on/off)"
+            return 1
+            ;;
+    esac
+}
 
 # -----------------------------------------------------------------------------
 # Layout functions
@@ -140,9 +252,9 @@ apply_layout_monitoring() {
     tmux split-window -h -c "$cwd"
     tmux send-keys "watch -n 2 'df -h; echo; free -h'" Enter
 
-    # Split down from top-right: bottom-right - network
+    # Split down from top-right: bottom-right - network (netstat preferred for process names)
     tmux split-window -v -c "$cwd"
-    tmux send-keys "watch -n 1 'ss -tuln 2>/dev/null || netstat -tuln'" Enter
+    tmux send-keys "watch -n 1 'netstat -tulnp 2>/dev/null || ss -tulnp 2>/dev/null || netstat -tuln'" Enter
 
     # Go back to top-left and split down: bottom-left - logs
     tmux select-pane -t "$base_pane"
@@ -156,15 +268,28 @@ apply_layout_monitoring() {
 
 ## Apply writing layout: single maximized pane
 apply_layout_writing() {
-    # Just ensure we're in a clean single pane
-    # Kill other panes if any
+    local cwd="${1:-$(pwd)}"
+    local layout_file="${PIMPMYTMUX_TEMPLATES_DIR}/writing.yaml"
+
+    # 1. Parse settings from template
+    _parse_layout_settings "$layout_file"
+
+    # 2. Confirmation before destructive action
+    if ! _confirm_layout_apply "writing"; then
+        log_warn "Layout application cancelled"
+        return 1
+    fi
+
+    # 3. Kill other panes if any
     local pane_count
-    pane_count=$(tmux display-message -p '#{window_panes}')
+    pane_count=$(tmux display-message -p '#{window_panes}' 2>/dev/null || echo "1")
 
     if [[ "$pane_count" -gt 1 ]]; then
-        log_warn "Killing other panes for zen mode"
         tmux kill-pane -a  # Kill all panes except current
     fi
+
+    # 4. Apply settings (status_bar, zen_mode)
+    _apply_layout_settings
 
     log_success "Applied writing (zen) layout"
 }
@@ -179,6 +304,9 @@ apply_layout_from_file() {
         return 1
     fi
 
+    # Parse settings from YAML
+    _parse_layout_settings "$layout_file"
+
     local layout_name
 
     if check_command yq; then
@@ -187,10 +315,12 @@ apply_layout_from_file() {
         layout_name=$(basename "$layout_file" .yaml)
     fi
 
+    # Convert to lowercase for matching
+    layout_name=$(echo "$layout_name" | tr '[:upper:]' '[:lower:]')
+
     log_info "Applying layout: $layout_name"
 
-    # For now, use predefined layouts based on name
-    # TODO: Parse YAML layout definitions
+    # Dispatch to specific layout function based on name
     case "$layout_name" in
         *fullstack*|*full-stack*)
             apply_layout_dev_fullstack "$cwd"
@@ -201,14 +331,19 @@ apply_layout_from_file() {
         *monitor*)
             apply_layout_monitoring "$cwd"
             ;;
-        *writing*|*zen*)
-            apply_layout_writing
+        *writing*)
+            # Writing layout handles its own settings via _parse_layout_settings
+            apply_layout_writing "$cwd"
+            return $?
             ;;
         *)
-            log_warn "Unknown layout type, applying tiled"
+            log_warn "Unknown layout type: $layout_name, applying tiled"
             tmux select-layout tiled
             ;;
     esac
+
+    # Apply settings for non-writing layouts
+    _apply_layout_settings
 }
 
 ## Apply a layout by name
@@ -222,19 +357,27 @@ apply_layout() {
         return 0
     fi
 
+    # Reset settings to defaults for non-file layouts
+    LAYOUT_ZEN_MODE="false"
+
     # Check for our custom layouts
     case "$layout_name" in
         dev-fullstack|fullstack)
             apply_layout_dev_fullstack "$cwd"
+            _apply_layout_settings
             ;;
         dev-api|api)
             apply_layout_dev_api "$cwd"
+            _apply_layout_settings
             ;;
         monitoring|monitor)
             apply_layout_monitoring "$cwd"
+            _apply_layout_settings
             ;;
-        writing|zen)
-            apply_layout_writing
+        writing)
+            # Writing handles its own settings
+            apply_layout_writing "$cwd"
+            return $?
             ;;
         *)
             # Try to find template file

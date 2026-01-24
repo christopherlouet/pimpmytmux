@@ -59,6 +59,7 @@ ${BOLD}COMMANDS:${RESET}
     session <cmd>   Session management (save, restore, list)
     layout <name>   Apply a predefined layout
     layouts         List available layouts
+    zen [on|off]    Toggle zen mode (hide status bar + borders)
     edit            Open configuration file in editor
     check           Validate configuration file
     status          Show current pimpmytmux status
@@ -470,6 +471,18 @@ cmd_layouts() {
     echo "Apply layout with: pimpmytmux layout <name>"
 }
 
+## Zen mode toggle
+cmd_zen() {
+    local action="${1:-}"
+
+    if ! is_inside_tmux; then
+        log_error "Must be inside tmux to toggle zen mode"
+        exit 1
+    fi
+
+    zen_toggle "$action"
+}
+
 # -----------------------------------------------------------------------------
 # Argument Parsing
 # -----------------------------------------------------------------------------
@@ -550,6 +563,9 @@ parse_args() {
             ;;
         layouts|list-layouts)
             cmd_layouts "$@"
+            ;;
+        zen)
+            cmd_zen "$@"
             ;;
         edit)
             cmd_edit "$@"

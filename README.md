@@ -68,6 +68,7 @@ pimpmytmux apply
 | `pimpmytmux session list` | List saved sessions |
 | `pimpmytmux layout <name>` | Apply a predefined layout |
 | `pimpmytmux layouts` | List available layouts |
+| `pimpmytmux zen [on\|off]` | Toggle zen mode (hide status bar + borders) |
 | `pimpmytmux wizard` | Run interactive setup wizard |
 | `pimpmytmux setup` | Quick setup with defaults |
 | `pimpmytmux edit` | Edit configuration file |
@@ -176,22 +177,42 @@ Code (70%) + Logs (30%). Ideal for API development.
 ```
 
 ### monitoring
-4-pane grid for system monitoring.
+4-pane grid for system monitoring (htop, disk/memory, logs, network).
 
 ```
 ┌───────────────────┬───────────────────┐
-│      htop         │      stats        │
+│      htop         │   disk / memory   │
 ├───────────────────┼───────────────────┤
 │      logs         │     network       │
 └───────────────────┴───────────────────┘
 ```
 
 ### writing
-Single maximized pane for distraction-free writing.
+Single maximized pane with zen mode enabled (hides status bar and borders).
+**Note:** This layout will close other panes after confirmation.
 
-Apply with:
+Apply layouts with:
 ```bash
 pimpmytmux layout dev-fullstack
+pimpmytmux layout monitoring
+```
+
+## Zen Mode
+
+Zen mode provides a distraction-free experience by hiding the status bar and pane borders.
+Unlike layouts, zen mode only changes visual settings without affecting your panes.
+
+```bash
+pimpmytmux zen          # Toggle zen mode on/off
+pimpmytmux zen on       # Enable zen mode
+pimpmytmux zen off      # Disable zen mode
+```
+
+You can combine zen mode with any layout:
+```bash
+pimpmytmux layout monitoring   # Apply 4-pane monitoring layout
+pimpmytmux zen                 # Hide status bar and borders
+pimpmytmux zen                 # Toggle back to normal
 ```
 
 ## Keybindings

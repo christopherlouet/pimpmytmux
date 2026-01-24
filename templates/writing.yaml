@@ -14,9 +14,7 @@ layout:
 
 # Settings for this layout
 settings:
-  # Hide status bar for zen mode (optional)
-  status_bar: false
-  # Larger font if supported
+  # Zen mode: hide status bar + pane borders for distraction-free writing
   zen_mode: true
 
 # Suitable for documentation, notes

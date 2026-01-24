@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2026-01-24
 
 ### Added
+- **Zen mode command**: `pimpmytmux zen [on|off]` to toggle distraction-free mode
+  - Hides status bar and pane borders without affecting pane layout
+  - Can be combined with any layout (e.g., `layout monitoring` + `zen on`)
+  - Toggle functionality: running `zen` without arguments toggles the current state
+- **Layout confirmation**: Destructive layouts now ask for confirmation before closing panes
+  - The `writing` layout prompts before closing existing panes
+  - Uses interactive confirmation via gum or standard prompt
+- **Layout settings from YAML**: Layouts can now define settings in their YAML templates
+  - `zen_mode: true` in template settings enables zen mode after applying layout
 - **INSTALL.md**: Comprehensive installation guide with platform-specific instructions
   - Ubuntu/Debian installation steps
   - Fedora/RHEL/CentOS installation steps
@@ -28,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive FAQ
 
 ### Changed
+- **Monitoring layout**: Network pane now prefers `netstat -tulnp` over `ss` to show process names
+- **Layout settings simplified**: Merged `status_bar` and `zen_mode` settings into single `zen_mode` option
 - **README.md**: Updated with links to new documentation guides
   - Added reference to INSTALL.md in Quick Start section
   - Added reference to USAGE.md in Configuration section
