@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - 2026-01-24
 
 ### Added
+- **Configuration sync** (`lib/sync.sh`): Git-based configuration synchronization
+  - `pimpmytmux sync init <repo>`: Initialize sync with a git repository
+  - `pimpmytmux sync push [message]`: Push local changes to remote
+  - `pimpmytmux sync pull`: Pull remote changes
+  - `pimpmytmux sync status`: Show sync status
+  - Syncs themes, templates, session-templates, and profiles
+- **Conditional keybindings** (`lib/conditional.sh`): Context-aware keybindings
+  - `hostname:<pattern>` condition: Different bindings per host
+  - `project:<type>` condition: Different bindings per project type (node, rust, go, etc.)
+  - `env:<VAR>=<value>` condition: Bindings based on environment variables
+  - Define in `keybindings.conditional` section of config
 - **Profile system** (`lib/profiles.sh`): Multiple configurations for different contexts
   - `pimpmytmux profile list`: Show all profiles with current marked
   - `pimpmytmux profile switch <name>`: Switch to different profile

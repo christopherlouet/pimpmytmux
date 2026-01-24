@@ -30,6 +30,8 @@ load_lib "preview" "optional"
 load_lib "gallery" "optional"
 load_lib "profiles" "optional"
 load_lib "detect" "optional"
+load_lib "sync" "optional"
+load_lib "conditional" "optional"
 load_lib "wizard" "optional"
 
 # Load session modules (optional)
@@ -72,6 +74,7 @@ ${BOLD}COMMANDS:${RESET}
     layouts         List available layouts
     zen [on|off]    Toggle zen mode (hide status bar + borders)
     backup <cmd>    Backup management (list, restore, create, cleanup)
+    sync <cmd>      Sync configuration via git (init, push, pull, status)
     detect [path]   Detect project type and show info
     edit            Open configuration file in editor
     check           Validate configuration file
@@ -723,6 +726,61 @@ cmd_detect() {
     fi
 }
 
+## Sync configuration via git
+cmd_sync() {
+    local subcmd="${1:-}"
+    shift || true
+
+    if ! check_command get_sync_repo; then
+        log_error "Sync not available (lib/sync.sh not loaded)"
+        exit 1
+    fi
+
+    case "$subcmd" in
+        init)
+            local repo_url="${1:-}"
+            if [[ -z "$repo_url" ]]; then
+                log_error "Repository URL required"
+                log_info "Usage: pimpmytmux sync init <repo-url>"
+                log_info "Example: pimpmytmux sync init git@github.com:user/dotfiles.git"
+                exit 1
+            fi
+            sync_init "$repo_url"
+            ;;
+        push)
+            local message="${1:-Update pimpmytmux configuration}"
+            sync_push "$message"
+            ;;
+        pull)
+            sync_pull
+            ;;
+        status)
+            sync_status
+            ;;
+        "")
+            log_error "Subcommand required"
+            echo ""
+            echo "Usage: pimpmytmux sync <command>"
+            echo ""
+            echo "Commands:"
+            echo "    init <repo-url>   Initialize sync with a git repository"
+            echo "    push [message]    Push local changes to remote"
+            echo "    pull              Pull remote changes"
+            echo "    status            Show sync status"
+            echo ""
+            echo "Examples:"
+            echo "    pimpmytmux sync init git@github.com:user/dotfiles.git"
+            echo "    pimpmytmux sync push \"Updated theme\""
+            echo "    pimpmytmux sync pull"
+            exit 1
+            ;;
+        *)
+            log_error "Unknown sync command: $subcmd"
+            exit 1
+            ;;
+    esac
+}
+
 ## Session management command
 cmd_session() {
     local subcmd="${1:-}"
@@ -1045,6 +1103,9 @@ parse_args() {
             ;;
         backup)
             cmd_backup "$@"
+            ;;
+        sync)
+            cmd_sync "$@"
             ;;
         detect)
             cmd_detect "$@"

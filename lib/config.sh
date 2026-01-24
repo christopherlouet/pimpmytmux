@@ -367,6 +367,16 @@ bind -T copy-mode-vi Escape send-keys -X cancel
 
 EOF
     fi
+
+    # Conditional keybindings (if available)
+    if check_command generate_conditional_keybindings; then
+        local conditional_bindings
+        conditional_bindings=$(generate_conditional_keybindings "${PIMPMYTMUX_CONFIG_FILE:-}" 2>/dev/null || true)
+        if [[ -n "$conditional_bindings" ]]; then
+            echo ""
+            echo "$conditional_bindings"
+        fi
+    fi
 }
 
 ## Generate status bar configuration

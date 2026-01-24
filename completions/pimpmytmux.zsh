@@ -80,6 +80,7 @@ _pimpmytmux() {
                 'layouts:List available layouts'
                 'zen:Toggle zen mode'
                 'backup:Backup management'
+                'sync:Sync configuration via git'
                 'detect:Detect project type'
                 'edit:Open configuration file in editor'
                 'check:Validate configuration file'
@@ -218,6 +219,27 @@ _pimpmytmux() {
                                 ;;
                             cleanup)
                                 _message 'Number of backups to keep'
+                                ;;
+                        esac
+                    fi
+                    ;;
+
+                sync)
+                    if (( CURRENT == 3 )); then
+                        local subcmds=(
+                            'init:Initialize sync with a git repository'
+                            'push:Push local changes to remote'
+                            'pull:Pull remote changes'
+                            'status:Show sync status'
+                        )
+                        _describe -t subcommands 'subcommand' subcmds
+                    elif (( CURRENT == 4 )); then
+                        case $words[3] in
+                            init)
+                                _message 'Git repository URL'
+                                ;;
+                            push)
+                                _message 'Commit message (optional)'
                                 ;;
                         esac
                     fi
