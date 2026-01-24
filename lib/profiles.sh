@@ -15,8 +15,8 @@ source "${PIMPMYTMUX_LIB_DIR:-$(dirname "${BASH_SOURCE[0]}")}/core.sh"
 
 PIMPMYTMUX_PROFILES_DIR="${PIMPMYTMUX_PROFILES_DIR:-${PIMPMYTMUX_CONFIG_DIR}/profiles}"
 
-# Reserved profile names
-readonly RESERVED_PROFILE_NAMES=("current")
+# Reserved profile names (hardcoded in is_valid_profile_name for bash 3.x compat)
+# "current" is used as a symlink to the active profile
 
 # -----------------------------------------------------------------------------
 # Profile Directory Functions
@@ -168,11 +168,9 @@ is_valid_profile_name() {
     # Must not start with . or contain ..
     [[ "$name" =~ ^\.|\.\. ]] && return 1
 
-    # Must not be a reserved name (bash 3.x compatible)
-    local reserved
-    for reserved in ${RESERVED_PROFILE_NAMES[@]+"${RESERVED_PROFILE_NAMES[@]}"}; do
-        [[ "$name" == "$reserved" ]] && return 1
-    done
+    # Must not be a reserved name
+    # Note: "current" is used as symlink to active profile
+    [[ "$name" == "current" ]] && return 1
 
     # Must match valid characters (alphanumeric, dash, underscore)
     [[ "$name" =~ ^[a-zA-Z0-9_-]+$ ]]
