@@ -257,9 +257,9 @@ is_valid_tmux_option() {
         return 1
     fi
 
-    # Check against known options
+    # Check against known options (bash 3.x compatible)
     local known_option
-    for known_option in "${TMUX_COMMON_OPTIONS[@]}"; do
+    for known_option in ${TMUX_COMMON_OPTIONS[@]+"${TMUX_COMMON_OPTIONS[@]}"}; do
         if [[ "$known_option" == "$option" ]]; then
             return 0
         fi

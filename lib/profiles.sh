@@ -168,12 +168,11 @@ is_valid_profile_name() {
     # Must not start with . or contain ..
     [[ "$name" =~ ^\.|\.\. ]] && return 1
 
-    # Must not be a reserved name
-    if [[ ${#RESERVED_PROFILE_NAMES[@]} -gt 0 ]]; then
-        for reserved in "${RESERVED_PROFILE_NAMES[@]}"; do
-            [[ "$name" == "$reserved" ]] && return 1
-        done
-    fi
+    # Must not be a reserved name (bash 3.x compatible)
+    local reserved
+    for reserved in ${RESERVED_PROFILE_NAMES[@]+"${RESERVED_PROFILE_NAMES[@]}"}; do
+        [[ "$name" == "$reserved" ]] && return 1
+    done
 
     # Must match valid characters (alphanumeric, dash, underscore)
     [[ "$name" =~ ^[a-zA-Z0-9_-]+$ ]]
