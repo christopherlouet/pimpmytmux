@@ -19,15 +19,19 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 export PIMPMYTMUX_ROOT="${PIMPMYTMUX_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 export PIMPMYTMUX_LIB_DIR="${PIMPMYTMUX_ROOT}/lib"
 
-# Source libraries
+# Source core library first (required for load_module)
 source "${PIMPMYTMUX_LIB_DIR}/core.sh"
-source "${PIMPMYTMUX_LIB_DIR}/config.sh"
-source "${PIMPMYTMUX_LIB_DIR}/wizard.sh" 2>/dev/null || true
 
-# Source modules
-source "${PIMPMYTMUX_ROOT}/modules/sessions/save.sh" 2>/dev/null || true
-source "${PIMPMYTMUX_ROOT}/modules/sessions/restore.sh" 2>/dev/null || true
-source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh" 2>/dev/null || true
+# Load required libraries using explicit loading
+load_lib "config" "required"
+load_lib "validation" "optional"
+load_lib "backup" "optional"
+load_lib "wizard" "optional"
+
+# Load session modules (optional)
+load_module "${PIMPMYTMUX_ROOT}/modules/sessions/save.sh" "optional"
+load_module "${PIMPMYTMUX_ROOT}/modules/sessions/restore.sh" "optional"
+load_module "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh" "optional"
 
 # -----------------------------------------------------------------------------
 # CLI Configuration
@@ -60,6 +64,7 @@ ${BOLD}COMMANDS:${RESET}
     layout <name>   Apply a predefined layout
     layouts         List available layouts
     zen [on|off]    Toggle zen mode (hide status bar + borders)
+    backup <cmd>    Backup management (list, restore)
     edit            Open configuration file in editor
     check           Validate configuration file
     status          Show current pimpmytmux status
@@ -74,6 +79,7 @@ ${BOLD}OPTIONS:${RESET}
     -v, --verbose          Enable verbose output
     -d, --debug            Enable debug output
     --dry-run              Show what would be done without doing it
+    --no-backup            Skip automatic backup before apply
     -q, --quiet            Suppress non-error output
     -h, --help             Show help for a command
 
@@ -145,27 +151,69 @@ EOF
 
 ## Apply configuration - generate tmux.conf and optionally reload
 cmd_apply() {
+    local no_backup="${NO_BACKUP:-false}"
+
     log_info "Applying pimpmytmux configuration..."
 
     # Check if config exists
     if [[ ! -f "$PIMPMYTMUX_CONFIG_FILE" ]]; then
-        log_error "Config file not found: $PIMPMYTMUX_CONFIG_FILE"
-        log_info "Run 'pimpmytmux init' to create a default config"
+        error_with_suggestion "Config file not found: $PIMPMYTMUX_CONFIG_FILE" \
+            "Run 'pimpmytmux init' to create a default config"
         exit 1
     fi
 
-    # Generate configuration
-    local output_file
+    # Generate configuration to temp file first
+    local output_file temp_file
     output_file=$(get_tmux_conf_path)
+    temp_file=$(mktemp)
 
-    if ! generate_tmux_conf "$PIMPMYTMUX_CONFIG_FILE" "$output_file" "$DRY_RUN"; then
+    log_verbose "Generating configuration to temporary file..."
+
+    if ! generate_tmux_conf "$PIMPMYTMUX_CONFIG_FILE" "$temp_file" "false"; then
+        rm -f "$temp_file"
         log_error "Failed to generate configuration"
         exit 1
     fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "Dry run - generated config:"
+        cat "$temp_file"
+        rm -f "$temp_file"
         return 0
     fi
+
+    # Validate the generated configuration
+    log_verbose "Validating generated configuration..."
+
+    if is_module_loaded "validation" || [[ -n "${_PIMPMYTMUX_VALIDATION_LOADED:-}" ]]; then
+        if ! validate_before_apply "$temp_file"; then
+            rm -f "$temp_file"
+            log_error_detail "Configuration validation failed" \
+                "The generated tmux.conf contains errors.\nPlease check your pimpmytmux.yaml configuration."
+            exit 1
+        fi
+        log_verbose "Configuration validated successfully"
+    else
+        log_debug "Validation module not loaded, skipping validation"
+    fi
+
+    # Backup existing configuration (unless disabled)
+    if [[ "$no_backup" != "true" ]]; then
+        if is_module_loaded "backup" || [[ -n "${_PIMPMYTMUX_BACKUP_LOADED:-}" ]]; then
+            local backup_path
+            backup_path=$(backup_before_apply)
+            if [[ -n "$backup_path" ]]; then
+                log_verbose "Backed up existing config"
+            fi
+        else
+            log_debug "Backup module not loaded, skipping backup"
+        fi
+    fi
+
+    # Move temp file to final destination
+    ensure_dir "$(dirname "$output_file")"
+    mv "$temp_file" "$output_file"
+    log_verbose "Generated: $output_file"
 
     # Setup symlink
     setup_tmux_conf_symlink
@@ -374,6 +422,56 @@ cmd_status() {
     done
 }
 
+## Backup management command
+cmd_backup() {
+    local subcmd="${1:-}"
+    shift || true
+
+    case "$subcmd" in
+        list)
+            echo -e "${BOLD}Configuration backups:${RESET}"
+            echo ""
+            list_backups
+            ;;
+        restore)
+            local backup_file="${1:-}"
+            if [[ -z "$backup_file" ]]; then
+                # Try to get latest backup
+                backup_file=$(get_latest_backup)
+                if [[ -z "$backup_file" ]]; then
+                    log_error "No backups available"
+                    exit 1
+                fi
+                log_info "Restoring latest backup: $(basename "$backup_file")"
+            fi
+            restore_backup "$backup_file"
+            ;;
+        create)
+            backup_config
+            ;;
+        cleanup)
+            local keep="${1:-5}"
+            cleanup_old_backups "$keep"
+            ;;
+        "")
+            log_error "Subcommand required"
+            echo ""
+            echo "Usage: pimpmytmux backup <command>"
+            echo ""
+            echo "Commands:"
+            echo "    list              List available backups"
+            echo "    restore [file]    Restore a backup (latest if no file specified)"
+            echo "    create            Create a manual backup"
+            echo "    cleanup [n]       Keep only last n backups (default: 5)"
+            exit 1
+            ;;
+        *)
+            log_error "Unknown backup command: $subcmd"
+            exit 1
+            ;;
+    esac
+}
+
 ## Session management command
 cmd_session() {
     local subcmd="${1:-}"
@@ -512,6 +610,10 @@ parse_args() {
                 DRY_RUN=true
                 shift
                 ;;
+            --no-backup)
+                NO_BACKUP=true
+                shift
+                ;;
             -h|--help)
                 show_help
                 exit 0
@@ -575,6 +677,9 @@ parse_args() {
             ;;
         status)
             cmd_status "$@"
+            ;;
+        backup)
+            cmd_backup "$@"
             ;;
         init)
             cmd_init "$@"

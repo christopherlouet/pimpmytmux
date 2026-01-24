@@ -76,6 +76,91 @@ log_verbose() {
 }
 
 # -----------------------------------------------------------------------------
+# Enhanced Error Functions
+# -----------------------------------------------------------------------------
+
+## Log an error with a suggested action
+## Usage: error_with_suggestion <error_message> <suggestion>
+## Example: error_with_suggestion "Config file not found" "Run 'pimpmytmux init' to create one"
+error_with_suggestion() {
+    local error_msg="$1"
+    local suggestion="$2"
+
+    echo -e "${RED}${BOLD}[ERROR]${RESET} ${error_msg}" >&2
+    if [[ -n "$suggestion" ]]; then
+        echo -e "        ${YELLOW}Suggestion:${RESET} ${suggestion}" >&2
+    fi
+    return 0
+}
+
+## Log a fatal error and exit
+## Usage: die <message> [exit_code]
+die() {
+    local message="$1"
+    local exit_code="${2:-1}"
+
+    echo -e "${RED}${BOLD}[FATAL]${RESET} ${message}" >&2
+    exit "$exit_code"
+}
+
+## Log a fatal error with help hint and exit
+## Usage: die_with_help <message> [command_hint]
+## Example: die_with_help "Unknown command" "pimpmytmux help"
+die_with_help() {
+    local message="$1"
+    local hint="${2:-pimpmytmux help}"
+
+    echo -e "${RED}${BOLD}[FATAL]${RESET} ${message}" >&2
+    echo -e "        ${DIM}Run '${hint}' for usage information${RESET}" >&2
+    exit 1
+}
+
+## Log an error with detailed context (multiline)
+## Usage: log_error_detail <title> <details>
+## Example: log_error_detail "Validation failed" "Line 5: unknown option 'foo'"
+log_error_detail() {
+    local title="$1"
+    local details="$2"
+
+    echo -e "${RED}${BOLD}[ERROR]${RESET} ${title}" >&2
+    echo -e "${RED}────────────────────────────────────────${RESET}" >&2
+    echo -e "${details}" >&2
+    echo -e "${RED}────────────────────────────────────────${RESET}" >&2
+    return 0
+}
+
+## Display a boxed error message for critical errors
+## Usage: log_error_box <message>
+log_error_box() {
+    local message="$1"
+    local len=${#message}
+    local border=""
+
+    # Create border
+    for ((i = 0; i < len + 4; i++)); do
+        border+="─"
+    done
+
+    echo -e "${RED}┌${border}┐${RESET}" >&2
+    echo -e "${RED}│${RESET}  ${BOLD}${message}${RESET}  ${RED}│${RESET}" >&2
+    echo -e "${RED}└${border}┘${RESET}" >&2
+    return 0
+}
+
+## Log a warning with suggested action
+## Usage: warn_with_action <warning> <action>
+warn_with_action() {
+    local warning="$1"
+    local action="$2"
+
+    echo -e "${YELLOW}[WARN]${RESET} ${warning}" >&2
+    if [[ -n "$action" ]]; then
+        echo -e "       ${DIM}Action:${RESET} ${action}" >&2
+    fi
+    return 0
+}
+
+# -----------------------------------------------------------------------------
 # Platform detection
 # -----------------------------------------------------------------------------
 
@@ -242,6 +327,113 @@ ensure_dir() {
         mkdir -p "$dir"
         log_debug "Created directory: $dir"
     fi
+}
+
+# -----------------------------------------------------------------------------
+# Module Loading
+# -----------------------------------------------------------------------------
+
+# Track loaded modules
+declare -a _PIMPMYTMUX_LOADED_MODULES=()
+
+## Load a module/library file with explicit error handling
+## Usage: load_module <module_path> [required]
+## required: if "required", will exit on failure; if "optional", will warn only
+## Returns: 0 on success, 1 on failure (for optional modules)
+load_module() {
+    local module_path="$1"
+    local required="${2:-optional}"
+    local module_name
+    module_name=$(basename "$module_path" .sh)
+
+    # Check if already loaded
+    if array_contains "$module_path" "${_PIMPMYTMUX_LOADED_MODULES[@]:-}"; then
+        log_debug "Module already loaded: $module_name"
+        return 0
+    fi
+
+    # Check file exists
+    if [[ ! -f "$module_path" ]]; then
+        if [[ "$required" == "required" ]]; then
+            die "Required module not found: $module_path"
+        else
+            log_debug "Optional module not found: $module_path"
+            return 1
+        fi
+    fi
+
+    # Check file is readable
+    if [[ ! -r "$module_path" ]]; then
+        if [[ "$required" == "required" ]]; then
+            die "Cannot read required module: $module_path"
+        else
+            log_warn "Cannot read optional module: $module_path"
+            return 1
+        fi
+    fi
+
+    # Source the module
+    log_debug "Loading module: $module_name ($module_path)"
+    # shellcheck disable=SC1090
+    if source "$module_path"; then
+        _PIMPMYTMUX_LOADED_MODULES+=("$module_path")
+        log_debug "Loaded module: $module_name"
+        return 0
+    else
+        if [[ "$required" == "required" ]]; then
+            die "Failed to load required module: $module_path"
+        else
+            log_warn "Failed to load optional module: $module_path"
+            return 1
+        fi
+    fi
+}
+
+## Load a library from the lib directory
+## Usage: load_lib <lib_name> [required]
+## Example: load_lib "config" "required"
+load_lib() {
+    local lib_name="$1"
+    local required="${2:-required}"
+    local lib_path="${PIMPMYTMUX_LIB_DIR}/${lib_name}.sh"
+
+    load_module "$lib_path" "$required"
+}
+
+## List all loaded modules
+## Usage: list_loaded_modules
+list_loaded_modules() {
+    if [[ -z "${_PIMPMYTMUX_LOADED_MODULES[*]:-}" ]] || [[ ${#_PIMPMYTMUX_LOADED_MODULES[@]} -eq 0 ]]; then
+        echo "No modules loaded"
+        return 0
+    fi
+
+    echo "Loaded modules:"
+    local module
+    for module in "${_PIMPMYTMUX_LOADED_MODULES[@]}"; do
+        echo "  - $(basename "$module" .sh)"
+    done
+}
+
+## Check if a module is loaded
+## Usage: is_module_loaded <module_name_or_path>
+is_module_loaded() {
+    local module="$1"
+
+    # Check by path
+    if array_contains "$module" "${_PIMPMYTMUX_LOADED_MODULES[@]:-}"; then
+        return 0
+    fi
+
+    # Check by name
+    local loaded
+    for loaded in "${_PIMPMYTMUX_LOADED_MODULES[@]:-}"; do
+        if [[ "$(basename "$loaded" .sh)" == "$module" ]]; then
+            return 0
+        fi
+    done
+
+    return 1
 }
 
 # -----------------------------------------------------------------------------

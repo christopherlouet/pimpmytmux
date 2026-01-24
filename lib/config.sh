@@ -2,6 +2,10 @@
 # pimpmytmux - Configuration parsing and tmux.conf generation
 # https://github.com/christopherlouet/pimpmytmux
 
+# Guard against re-sourcing
+[[ -n "${_PIMPMYTMUX_CONFIG_LOADED:-}" ]] && return 0
+_PIMPMYTMUX_CONFIG_LOADED=1
+
 # shellcheck source=lib/core.sh
 source "${PIMPMYTMUX_LIB_DIR:-$(dirname "${BASH_SOURCE[0]}")}/core.sh"
 # shellcheck source=lib/themes.sh
@@ -45,7 +49,24 @@ detect_yq_version() {
     fi
 }
 
-## Get a value from YAML file using yq (Go version)
+## Require yq to be installed
+## Usage: require_yq
+## Exits with error if yq is not available
+require_yq() {
+    if ! check_command yq; then
+        log_error "yq is required but not installed."
+        log_error ""
+        log_error "Install yq (Go version recommended):"
+        log_error "  macOS:   brew install yq"
+        log_error "  Linux:   sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq"
+        log_error "  Snap:    sudo snap install yq"
+        log_error ""
+        log_error "More info: https://github.com/mikefarah/yq"
+        exit 1
+    fi
+}
+
+## Get a value from YAML file using yq
 ## Usage: yq_get <file> <path>
 ## Example: yq_get config.yaml '.theme'
 yq_get() {
@@ -57,54 +78,40 @@ yq_get() {
         return 1
     fi
 
+    # Require yq - no fallback
+    require_yq
+
     local yq_type
     yq_type=$(detect_yq_version)
 
+    # Note: We use select() instead of // to properly handle false values
+    # The // operator treats false as falsy, which causes issues with booleans
     case "$yq_type" in
         go)
-            yq eval "$path // \"\"" "$file" 2>/dev/null
+            local result
+            result=$(yq eval "$path" "$file" 2>/dev/null)
+            # Handle null explicitly
+            if [[ "$result" == "null" ]]; then
+                echo ""
+            else
+                echo "$result"
+            fi
             ;;
         python)
-            yq -r "$path // \"\"" "$file" 2>/dev/null
+            local result
+            result=$(yq -r "$path" "$file" 2>/dev/null)
+            if [[ "$result" == "null" ]]; then
+                echo ""
+            else
+                echo "$result"
+            fi
             ;;
         *)
-            # Fallback: simple grep-based extraction for basic cases
-            _yaml_get_simple "$file" "$path"
+            # Should not reach here after require_yq
+            log_error "yq is required for YAML parsing"
+            return 1
             ;;
     esac
-}
-
-## Simple YAML getter for basic key: value pairs (fallback when yq not available)
-## Only works for top-level keys or simple nested keys
-_yaml_get_simple() {
-    local file="$1"
-    local path="$2"
-
-    # Remove leading dot
-    path="${path#.}"
-
-    # Handle simple top-level key
-    if [[ "$path" != *.* ]]; then
-        grep -E "^${path}:" "$file" 2>/dev/null | head -1 | sed 's/^[^:]*:[[:space:]]*//' | sed 's/[[:space:]]*$//'
-        return
-    fi
-
-    # For nested keys, we need more complex parsing
-    # This is a simplified version that handles one level of nesting
-    local parent="${path%%.*}"
-    local child="${path#*.}"
-
-    awk -v parent="$parent" -v child="$child" '
-        BEGIN { in_parent = 0 }
-        /^[a-zA-Z_]/ { in_parent = 0 }
-        $0 ~ "^" parent ":" { in_parent = 1; next }
-        in_parent && $0 ~ "^[[:space:]]+" child ":" {
-            sub(/^[[:space:]]*[^:]+:[[:space:]]*/, "")
-            gsub(/[[:space:]]*$/, "")
-            print
-            exit
-        }
-    ' "$file"
 }
 
 ## Get a config value with default fallback
