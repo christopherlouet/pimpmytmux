@@ -79,6 +79,7 @@ _pimpmytmux() {
                 'layouts:List available layouts'
                 'zen:Toggle zen mode'
                 'backup:Backup management'
+                'detect:Detect project type'
                 'edit:Open configuration file in editor'
                 'check:Validate configuration file'
                 'status:Show current status'

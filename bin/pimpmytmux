@@ -29,6 +29,7 @@ load_lib "backup" "optional"
 load_lib "preview" "optional"
 load_lib "gallery" "optional"
 load_lib "profiles" "optional"
+load_lib "detect" "optional"
 load_lib "wizard" "optional"
 
 # Load session modules (optional)
@@ -69,6 +70,7 @@ ${BOLD}COMMANDS:${RESET}
     layouts         List available layouts
     zen [on|off]    Toggle zen mode (hide status bar + borders)
     backup <cmd>    Backup management (list, restore, create, cleanup)
+    detect [path]   Detect project type and show info
     edit            Open configuration file in editor
     check           Validate configuration file
     status          Show current pimpmytmux status
@@ -672,6 +674,53 @@ cmd_profile() {
     esac
 }
 
+## Detect project type and show info
+cmd_detect() {
+    local dir="${1:-$(pwd)}"
+    local apply_layout=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --apply)
+                apply_layout=true
+                shift
+                ;;
+            *)
+                dir="$1"
+                shift
+                ;;
+        esac
+    done
+
+    if ! check_command detect_project_type; then
+        log_error "Project detection not available (lib/detect.sh not loaded)"
+        exit 1
+    fi
+
+    local type
+    type=$(detect_project_type "$dir")
+
+    if [[ "$type" == "unknown" ]]; then
+        log_warn "Could not detect project type in: $dir"
+        log_info "Supported project types:"
+        list_project_types
+        exit 1
+    fi
+
+    # Show project info
+    show_project_info "$dir"
+
+    # Apply layout if requested
+    if [[ "$apply_layout" == "true" ]]; then
+        if ! is_inside_tmux; then
+            log_error "Must be inside tmux to apply layout"
+            exit 1
+        fi
+        apply_project_layout "$dir"
+    fi
+}
+
 ## Session management command
 cmd_session() {
     local subcmd="${1:-}"
@@ -913,6 +962,9 @@ parse_args() {
             ;;
         backup)
             cmd_backup "$@"
+            ;;
+        detect)
+            cmd_detect "$@"
             ;;
         init)
             cmd_init "$@"
