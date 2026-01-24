@@ -32,6 +32,7 @@ load_lib "profiles" "optional"
 load_lib "detect" "optional"
 load_lib "sync" "optional"
 load_lib "conditional" "optional"
+load_lib "plugins" "optional"
 load_lib "wizard" "optional"
 
 # Load session modules (optional)
@@ -75,6 +76,7 @@ ${BOLD}COMMANDS:${RESET}
     zen [on|off]    Toggle zen mode (hide status bar + borders)
     backup <cmd>    Backup management (list, restore, create, cleanup)
     sync <cmd>      Sync configuration via git (init, push, pull, status)
+    plugin <cmd>    Plugin management (list, install, remove, update)
     detect [path]   Detect project type and show info
     edit            Open configuration file in editor
     check           Validate configuration file
@@ -781,6 +783,124 @@ cmd_sync() {
     esac
 }
 
+## Plugin management command
+cmd_plugin() {
+    local subcmd="${1:-}"
+    shift || true
+
+    if ! check_command list_plugins; then
+        log_error "Plugin system not available (lib/plugins.sh not loaded)"
+        exit 1
+    fi
+
+    # Initialize plugins directory
+    init_plugins_dir
+
+    case "$subcmd" in
+        list)
+            echo -e "${BOLD}Installed plugins:${RESET}"
+            echo ""
+            local plugins
+            plugins=$(list_plugins)
+            if [[ -z "$plugins" ]]; then
+                echo "  No plugins installed."
+                echo ""
+                echo "Install plugins with: pimpmytmux plugin install <url>"
+            else
+                while IFS= read -r plugin; do
+                    if [[ -n "$plugin" ]]; then
+                        local version
+                        version=$(get_plugin_info "$plugin" "version" 2>/dev/null || echo "")
+                        local enabled=""
+                        if is_plugin_enabled "$plugin"; then
+                            enabled="${GREEN}*${RESET}"
+                        else
+                            enabled="${DIM}-${RESET}"
+                        fi
+                        if [[ -n "$version" ]]; then
+                            echo -e "  $enabled $plugin (v$version)"
+                        else
+                            echo -e "  $enabled $plugin"
+                        fi
+                    fi
+                done <<< "$plugins"
+            fi
+            echo ""
+            ;;
+        install)
+            local url="${1:-}"
+            if [[ -z "$url" ]]; then
+                log_error "URL required"
+                log_info "Usage: pimpmytmux plugin install <git-url>"
+                exit 1
+            fi
+            install_plugin "$url"
+            ;;
+        remove)
+            local name="${1:-}"
+            if [[ -z "$name" ]]; then
+                log_error "Plugin name required"
+                log_info "Usage: pimpmytmux plugin remove <name>"
+                exit 1
+            fi
+            # Confirm removal
+            echo -n "Remove plugin '$name'? [y/N] "
+            read -r confirm
+            if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                remove_plugin "$name"
+            else
+                log_info "Cancelled"
+            fi
+            ;;
+        update)
+            update_plugins
+            ;;
+        enable)
+            local name="${1:-}"
+            if [[ -z "$name" ]]; then
+                log_error "Plugin name required"
+                log_info "Usage: pimpmytmux plugin enable <name>"
+                exit 1
+            fi
+            enable_plugin "$name"
+            log_success "Plugin '$name' enabled"
+            ;;
+        disable)
+            local name="${1:-}"
+            if [[ -z "$name" ]]; then
+                log_error "Plugin name required"
+                log_info "Usage: pimpmytmux plugin disable <name>"
+                exit 1
+            fi
+            disable_plugin "$name"
+            log_success "Plugin '$name' disabled"
+            ;;
+        "")
+            log_error "Subcommand required"
+            echo ""
+            echo "Usage: pimpmytmux plugin <command>"
+            echo ""
+            echo "Commands:"
+            echo "    list              List installed plugins"
+            echo "    install <url>     Install plugin from git URL"
+            echo "    remove <name>     Remove installed plugin"
+            echo "    update            Update all plugins"
+            echo "    enable <name>     Enable a plugin"
+            echo "    disable <name>    Disable a plugin"
+            echo ""
+            echo "Examples:"
+            echo "    pimpmytmux plugin install https://github.com/user/pimpmytmux-awesome"
+            echo "    pimpmytmux plugin list"
+            echo "    pimpmytmux plugin remove pimpmytmux-awesome"
+            exit 1
+            ;;
+        *)
+            log_error "Unknown plugin command: $subcmd"
+            exit 1
+            ;;
+    esac
+}
+
 ## Session management command
 cmd_session() {
     local subcmd="${1:-}"
@@ -1106,6 +1226,9 @@ parse_args() {
             ;;
         sync)
             cmd_sync "$@"
+            ;;
+        plugin)
+            cmd_plugin "$@"
             ;;
         detect)
             cmd_detect "$@"

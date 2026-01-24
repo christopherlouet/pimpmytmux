@@ -81,6 +81,7 @@ _pimpmytmux() {
                 'zen:Toggle zen mode'
                 'backup:Backup management'
                 'sync:Sync configuration via git'
+                'plugin:Plugin management'
                 'detect:Detect project type'
                 'edit:Open configuration file in editor'
                 'check:Validate configuration file'
@@ -240,6 +241,29 @@ _pimpmytmux() {
                                 ;;
                             push)
                                 _message 'Commit message (optional)'
+                                ;;
+                        esac
+                    fi
+                    ;;
+
+                plugin)
+                    if (( CURRENT == 3 )); then
+                        local subcmds=(
+                            'list:List installed plugins'
+                            'install:Install plugin from git URL'
+                            'remove:Remove installed plugin'
+                            'update:Update all plugins'
+                            'enable:Enable a plugin'
+                            'disable:Disable a plugin'
+                        )
+                        _describe -t subcommands 'subcommand' subcmds
+                    elif (( CURRENT == 4 )); then
+                        case $words[3] in
+                            install)
+                                _message 'Git repository URL'
+                                ;;
+                            remove|enable|disable)
+                                _message 'Plugin name'
                                 ;;
                         esac
                     fi

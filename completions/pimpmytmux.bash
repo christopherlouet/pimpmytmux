@@ -10,7 +10,7 @@ _pimpmytmux_completions() {
     _init_completion || return
 
     # Main commands
-    local commands="apply reload theme themes profile session template layout layouts zen backup sync detect edit check status init wizard setup help version"
+    local commands="apply reload theme themes profile session template layout layouts zen backup sync plugin detect edit check status init wizard setup help version"
 
     # Profile subcommands
     local profile_cmds="list switch create delete"
@@ -26,6 +26,9 @@ _pimpmytmux_completions() {
 
     # Sync subcommands
     local sync_cmds="init push pull status"
+
+    # Plugin subcommands
+    local plugin_cmds="list install remove update enable disable"
 
     # Get available themes
     _pimpmytmux_themes() {
@@ -103,6 +106,10 @@ _pimpmytmux_completions() {
                 sync)
                     # Complete sync subcommands
                     COMPREPLY=($(compgen -W "$sync_cmds" -- "$cur"))
+                    ;;
+                plugin)
+                    # Complete plugin subcommands
+                    COMPREPLY=($(compgen -W "$plugin_cmds" -- "$cur"))
                     ;;
                 profile)
                     # Complete profile subcommands
