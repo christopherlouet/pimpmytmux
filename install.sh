@@ -477,7 +477,18 @@ EOF
     mkdir -p "${PIMPMYTMUX_DATA_DIR}/backups"
 
     # Clone or update repository
-    if [[ -d "${PIMPMYTMUX_INSTALL_DIR}/.git" ]]; then
+    # Priority: local repo > git pull > git clone
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [[ -f "${SCRIPT_DIR}/bin/pimpmytmux" ]]; then
+        # Running from local repository - always use local version
+        info "Installing from local repository..."
+        if [[ "$SCRIPT_DIR" != "$PIMPMYTMUX_INSTALL_DIR" ]]; then
+            rm -rf "$PIMPMYTMUX_INSTALL_DIR"
+            cp -r "$SCRIPT_DIR" "$PIMPMYTMUX_INSTALL_DIR"
+        fi
+        success "Installed from local"
+    elif [[ -d "${PIMPMYTMUX_INSTALL_DIR}/.git" ]]; then
+        # Existing installation - update from remote
         info "Updating pimpmytmux..."
         cd "$PIMPMYTMUX_INSTALL_DIR"
         # Ensure remote is configured and pull from origin main
@@ -487,20 +498,10 @@ EOF
         git pull origin main --quiet
         success "Updated to latest version"
     else
-        # Check if we're running from the repo
-        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        if [[ -f "${SCRIPT_DIR}/bin/pimpmytmux" ]]; then
-            info "Installing from local repository..."
-            if [[ "$SCRIPT_DIR" != "$PIMPMYTMUX_INSTALL_DIR" ]]; then
-                rm -rf "$PIMPMYTMUX_INSTALL_DIR"
-                cp -r "$SCRIPT_DIR" "$PIMPMYTMUX_INSTALL_DIR"
-            fi
-            success "Installed from local"
-        else
-            info "Cloning pimpmytmux repository..."
-            git clone --quiet "$PIMPMYTMUX_REPO" "$PIMPMYTMUX_INSTALL_DIR"
-            success "Cloned repository"
-        fi
+        # Fresh install - clone from remote
+        info "Cloning pimpmytmux repository..."
+        git clone --quiet "$PIMPMYTMUX_REPO" "$PIMPMYTMUX_INSTALL_DIR"
+        success "Cloned repository"
     fi
 
     # Create symlink to CLI
