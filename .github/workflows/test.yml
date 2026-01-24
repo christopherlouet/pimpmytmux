@@ -19,15 +19,19 @@ jobs:
         with:
           scandir: './lib'
           additional_files: 'bin/pimpmytmux'
+          severity: 'error'
         env:
-          SHELLCHECK_OPTS: -e SC1090 -e SC1091
+          # SC1090/SC1091: Can't follow dynamic source
+          # SC2034: Variables appear unused (false positives for exports)
+          SHELLCHECK_OPTS: -e SC1090 -e SC1091 -e SC2034
 
       - name: Shellcheck modules
         uses: ludeeus/action-shellcheck@master
         with:
           scandir: './modules'
+          severity: 'error'
         env:
-          SHELLCHECK_OPTS: -e SC1090 -e SC1091
+          SHELLCHECK_OPTS: -e SC1090 -e SC1091 -e SC2034
 
   test:
     name: Tests (${{ matrix.os }})
