@@ -34,7 +34,9 @@ list_session_templates() {
         fi
     done
 
-    printf '%s\n' "${templates[@]}" | sort
+    # Check for empty array for bash 3.x compatibility
+    [[ ${#templates[@]} -gt 0 ]] && printf '%s\n' "${templates[@]}" | sort
+    return 0
 }
 
 ## Check if a template exists

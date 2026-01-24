@@ -98,8 +98,9 @@ list_profiles() {
         fi
     done
 
-    # Sort and print
-    printf '%s\n' "${profiles[@]}" | sort
+    # Sort and print (check for empty array for bash 3.x compatibility)
+    [[ ${#profiles[@]} -gt 0 ]] && printf '%s\n' "${profiles[@]}" | sort
+    return 0
 }
 
 ## Check if a profile exists
@@ -168,9 +169,11 @@ is_valid_profile_name() {
     [[ "$name" =~ ^\.|\.\. ]] && return 1
 
     # Must not be a reserved name
-    for reserved in "${RESERVED_PROFILE_NAMES[@]}"; do
-        [[ "$name" == "$reserved" ]] && return 1
-    done
+    if [[ ${#RESERVED_PROFILE_NAMES[@]} -gt 0 ]]; then
+        for reserved in "${RESERVED_PROFILE_NAMES[@]}"; do
+            [[ "$name" == "$reserved" ]] && return 1
+        done
+    fi
 
     # Must match valid characters (alphanumeric, dash, underscore)
     [[ "$name" =~ ^[a-zA-Z0-9_-]+$ ]]

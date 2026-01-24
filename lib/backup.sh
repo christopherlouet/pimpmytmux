@@ -137,8 +137,10 @@ cleanup_old_backups() {
     fi
 
     # Get all backup files sorted by modification time (newest first)
-    local backup_files
-    mapfile -t backup_files < <(ls -1t "$PIMPMYTMUX_BACKUP_DIR"/*.bak 2>/dev/null || true)
+    local backup_files=()
+    while IFS= read -r file; do
+        [[ -n "$file" ]] && backup_files+=("$file")
+    done < <(ls -1t "$PIMPMYTMUX_BACKUP_DIR"/*.bak 2>/dev/null || true)
 
     local total=${#backup_files[@]}
     if [[ $total -le $keep_count ]]; then
