@@ -41,6 +41,8 @@ cd ~/.config/pimpmytmux
 ./bin/pimpmytmux wizard
 ```
 
+> **Need help?** See the [Installation Guide](INSTALL.md) for platform-specific instructions (Ubuntu, Fedora, Arch, macOS, WSL2) and troubleshooting.
+
 ### Quick Setup
 
 ```bash
@@ -145,7 +147,7 @@ modules:
     battery: true
 ```
 
-See `pimpmytmux.yaml.example` for all available options.
+See `pimpmytmux.yaml.example` for all available options, or check the [Usage Guide](USAGE.md) for detailed configuration examples and workflows.
 
 ## Layouts
 
@@ -319,9 +321,16 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 2. Define layout structure
 3. Optionally add a handler in `modules/sessions/layouts.sh`
 
+## Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [Installation Guide](INSTALL.md) | Platform-specific installation (Ubuntu, Fedora, Arch, macOS, WSL2), dependencies, troubleshooting |
+| [Usage Guide](USAGE.md) | Configuration examples, workflows, themes, layouts, keybindings, FAQ |
+
 ## License
 
-MIT License - see LICENSE file for details.
+GNU General Public License v3.0 - see LICENSE file for details.
 
 ## Acknowledgments
 

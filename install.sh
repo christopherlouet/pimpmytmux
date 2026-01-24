@@ -52,7 +52,7 @@ success() {
 # Configuration
 # -----------------------------------------------------------------------------
 
-PIMPMYTMUX_VERSION="0.1.0"
+PIMPMYTMUX_VERSION="0.2.0"
 PIMPMYTMUX_REPO="https://github.com/christopherlouet/pimpmytmux.git"
 PIMPMYTMUX_INSTALL_DIR="${PIMPMYTMUX_INSTALL_DIR:-$HOME/.pimpmytmux}"
 PIMPMYTMUX_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/pimpmytmux"
