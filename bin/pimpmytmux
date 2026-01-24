@@ -233,7 +233,7 @@ cmd_theme() {
 
 ## List available themes
 cmd_themes() {
-    echo "${BOLD}Available themes:${RESET}"
+    echo -e "${BOLD}Available themes:${RESET}"
     echo ""
 
     local themes_dir="${PIMPMYTMUX_ROOT}/themes"
@@ -253,7 +253,7 @@ cmd_themes() {
             name=$(basename "$theme_file" .yaml)
 
             if [[ "$name" == "$current_theme" ]]; then
-                echo "  ${GREEN}*${RESET} ${BOLD}$name${RESET} (current)"
+                echo -e "  ${GREEN}*${RESET} ${BOLD}$name${RESET} (current)"
             else
                 echo "    $name"
             fi
@@ -299,19 +299,19 @@ cmd_check() {
 
         # Show some info
         echo ""
-        echo "${BOLD}Configuration summary:${RESET}"
+        echo -e "${BOLD}Configuration summary:${RESET}"
         echo "  Theme:  $(get_config '.theme' 'default')"
         echo "  Prefix: $(get_config '.general.prefix' 'C-b')"
         echo "  Mouse:  $(get_config '.general.mouse' 'true')"
 
         # List enabled modules
         echo ""
-        echo "${BOLD}Enabled modules:${RESET}"
+        echo -e "${BOLD}Enabled modules:${RESET}"
         for module in sessions navigation devtools monitoring; do
             if config_enabled ".modules.${module}.enabled"; then
-                echo "  ${GREEN}+${RESET} $module"
+                echo -e "  ${GREEN}+${RESET} $module"
             else
-                echo "  ${DIM}-${RESET} $module"
+                echo -e "  ${DIM}-${RESET} $module"
             fi
         done
     else
@@ -322,7 +322,7 @@ cmd_check() {
 
 ## Show status
 cmd_status() {
-    echo "${BOLD}pimpmytmux status${RESET}"
+    echo -e "${BOLD}pimpmytmux status${RESET}"
     echo ""
 
     # Version
@@ -363,12 +363,12 @@ cmd_status() {
 
     # Dependencies
     echo ""
-    echo "${BOLD}Dependencies:${RESET}"
+    echo -e "${BOLD}Dependencies:${RESET}"
     for dep in yq fzf gum; do
         if check_command "$dep"; then
-            echo "  ${GREEN}+${RESET} $dep"
+            echo -e "  ${GREEN}+${RESET} $dep"
         else
-            echo "  ${DIM}-${RESET} $dep (optional)"
+            echo -e "  ${DIM}-${RESET} $dep (optional)"
         fi
     done
 }
@@ -443,7 +443,7 @@ cmd_layout() {
 
 ## List available layouts
 cmd_layouts() {
-    echo "${BOLD}Available layouts:${RESET}"
+    echo -e "${BOLD}Available layouts:${RESET}"
     echo ""
 
     local templates_dir="${PIMPMYTMUX_ROOT}/templates"
@@ -459,7 +459,7 @@ cmd_layouts() {
             name=$(basename "$layout_file" .yaml)
             desc=$(yq_get "$layout_file" ".description" 2>/dev/null || echo "")
 
-            echo "  ${CYAN}$name${RESET}"
+            echo -e "  ${CYAN}$name${RESET}"
             if [[ -n "$desc" ]]; then
                 echo "      $desc"
             fi
