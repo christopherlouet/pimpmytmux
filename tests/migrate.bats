@@ -101,8 +101,8 @@ EOF
 }
 
 @test "needs_migration returns false for current config" {
-    cat > "$PIMPMYTMUX_CONFIG_DIR/pimpmytmux.yaml" << 'EOF'
-version: "1.0.0"
+    cat > "$PIMPMYTMUX_CONFIG_DIR/pimpmytmux.yaml" << EOF
+version: "$PIMPMYTMUX_VERSION"
 theme: default
 EOF
 
