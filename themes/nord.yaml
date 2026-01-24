@@ -1,0 +1,47 @@
+# Nord Theme for pimpmytmux
+# Arctic, north-bluish color palette - https://nordtheme.com
+
+name: Nord
+description: An arctic, north-bluish color palette
+
+colors:
+  bg: "#2e3440"          # Polar Night - nord0
+  fg: "#eceff4"          # Snow Storm - nord6
+  accent: "#88c0d0"      # Frost - nord8
+  accent2: "#81a1c1"     # Frost - nord9
+  warning: "#ebcb8b"     # Aurora - nord13
+  error: "#bf616a"       # Aurora - nord11
+  success: "#a3be8c"     # Aurora - nord14
+  comment: "#4c566a"     # Polar Night - nord3
+  selection: "#3b4252"   # Polar Night - nord1
+  border: "#434c5e"      # Polar Night - nord2
+
+# Additional Nord colors:
+# nord4: "#d8dee9"  # Snow Storm
+# nord5: "#e5e9f0"  # Snow Storm
+# nord7: "#8fbcbb"  # Frost
+# nord10: "#5e81ac" # Frost
+# nord12: "#d08770" # Aurora (orange)
+# nord15: "#b48ead" # Aurora (purple)
+
+separators:
+  left: ""
+  right: ""
+  left_alt: ""
+  right_alt: ""
+
+icons:
+  session: ""            # Snowflake
+  window: ""
+  pane: ""
+  git: ""
+  time: ""
+  cpu: ""
+  memory: ""
+  battery: ""
+  network: "󰖩"
+
+status_bar:
+  style: powerline
+  show_prefix: true
+  show_mode: true

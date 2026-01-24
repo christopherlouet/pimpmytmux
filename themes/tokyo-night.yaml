@@ -1,0 +1,47 @@
+# Tokyo Night Theme for pimpmytmux
+# A dark VS Code theme inspired by Tokyo at night
+
+name: Tokyo Night
+description: Tokyo city lights - VS Code inspired dark theme
+
+colors:
+  bg: "#1a1b26"          # Background
+  fg: "#c0caf5"          # Foreground
+  accent: "#7aa2f7"      # Blue
+  accent2: "#bb9af7"     # Purple
+  warning: "#e0af68"     # Yellow
+  error: "#f7768e"       # Red
+  success: "#9ece6a"     # Green
+  comment: "#565f89"     # Comment
+  selection: "#283457"   # Selection
+  border: "#3b4261"      # Border
+
+# Additional Tokyo Night colors:
+# cyan: "#7dcfff"
+# magenta: "#ff007c"
+# orange: "#ff9e64"
+# teal: "#1abc9c"
+# dark_blue: "#3d59a1"
+# dark_purple: "#9d7cd8"
+
+separators:
+  left: ""
+  right: ""
+  left_alt: ""
+  right_alt: ""
+
+icons:
+  session: "󰅒"            # Tokyo tower style
+  window: ""
+  pane: ""
+  git: ""
+  time: ""
+  cpu: ""
+  memory: ""
+  battery: ""
+  network: "󰖩"
+
+status_bar:
+  style: powerline
+  show_prefix: true
+  show_mode: true

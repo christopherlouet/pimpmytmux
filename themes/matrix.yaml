@@ -1,0 +1,39 @@
+# Matrix Theme for pimpmytmux
+# Classic green terminal aesthetic - Follow the white rabbit
+
+name: Matrix
+description: Digital rain - Classic green terminal aesthetic
+
+colors:
+  bg: "#000000"
+  fg: "#00ff00"
+  accent: "#00ff00"      # Matrix green
+  accent2: "#008800"     # Darker green
+  warning: "#ccff00"     # Yellow-green
+  error: "#ff0000"       # Red pill
+  success: "#00ff44"     # Bright green
+  comment: "#005500"     # Dark green
+  selection: "#003300"   # Very dark green
+  border: "#004400"      # Green border
+
+separators:
+  left: ""
+  right: ""
+  left_alt: ""
+  right_alt: ""
+
+icons:
+  session: "󱞩"            # Matrix symbol
+  window: ""
+  pane: ""
+  git: ""
+  time: ""
+  cpu: ""
+  memory: ""
+  battery: ""
+  network: "󰖩"
+
+status_bar:
+  style: minimal
+  show_prefix: true
+  show_mode: true

@@ -1,0 +1,40 @@
+# Dev Fullstack Layout Template
+# Editor (60%) + Terminal (20%) + Server (20%)
+
+name: Dev Fullstack
+description: Editor + Terminal + Server (60/40 split)
+
+# Layout definition
+layout:
+  # Main horizontal split
+  orientation: horizontal
+  panes:
+    # Left pane: Editor (60%)
+    - size: 60%
+      name: editor
+      command: "${EDITOR:-.}"
+      focus: true
+
+    # Right side: vertical split
+    - size: 40%
+      orientation: vertical
+      panes:
+        # Top right: Terminal (50% of right side)
+        - size: 50%
+          name: terminal
+          command: ""
+
+        # Bottom right: Server (50% of right side)
+        - size: 50%
+          name: server
+          command: "npm run dev 2>/dev/null || npm start 2>/dev/null || echo 'Ready for server'"
+
+# Project type hints (auto-apply for these project types)
+auto_apply:
+  - nodejs
+  - react
+  - nextjs
+  - vue
+
+# Keybinding to quickly apply this layout
+keybinding: "M-1"

@@ -1,0 +1,42 @@
+# Monitoring Layout Template
+# 4 panes for system monitoring
+
+name: Monitoring
+description: 4 panes for system monitoring
+
+layout:
+  orientation: horizontal
+  panes:
+    # Left side
+    - size: 50%
+      orientation: vertical
+      panes:
+        # Top left: htop/top
+        - size: 50%
+          name: processes
+          command: "htop 2>/dev/null || top"
+
+        # Bottom left: logs
+        - size: 50%
+          name: logs
+          command: "echo 'Logs pane - use: tail -f /var/log/syslog'"
+
+    # Right side
+    - size: 50%
+      orientation: vertical
+      panes:
+        # Top right: disk/network
+        - size: 50%
+          name: stats
+          command: "watch -n 2 'df -h; echo; free -h'"
+
+        # Bottom right: network
+        - size: 50%
+          name: network
+          command: "watch -n 1 'ss -tuln 2>/dev/null || netstat -tuln'"
+
+auto_apply:
+  - docker
+  - terraform
+
+keybinding: "M-3"

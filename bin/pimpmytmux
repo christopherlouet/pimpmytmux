@@ -1,0 +1,588 @@
+#!/usr/bin/env bash
+# pimpmytmux - A modern, modular tmux configuration
+# https://github.com/[user]/pimpmytmux
+
+set -euo pipefail
+
+# -----------------------------------------------------------------------------
+# Initialization
+# -----------------------------------------------------------------------------
+
+# Determine the script location and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PIMPMYTMUX_ROOT="${PIMPMYTMUX_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+export PIMPMYTMUX_LIB_DIR="${PIMPMYTMUX_ROOT}/lib"
+
+# Source libraries
+source "${PIMPMYTMUX_LIB_DIR}/core.sh"
+source "${PIMPMYTMUX_LIB_DIR}/config.sh"
+source "${PIMPMYTMUX_LIB_DIR}/wizard.sh" 2>/dev/null || true
+
+# Source modules
+source "${PIMPMYTMUX_ROOT}/modules/sessions/save.sh" 2>/dev/null || true
+source "${PIMPMYTMUX_ROOT}/modules/sessions/restore.sh" 2>/dev/null || true
+source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh" 2>/dev/null || true
+
+# -----------------------------------------------------------------------------
+# CLI Configuration
+# -----------------------------------------------------------------------------
+
+PIMPMYTMUX_CONFIG_FILE="${PIMPMYTMUX_CONFIG_FILE:-${PIMPMYTMUX_CONFIG_DIR}/pimpmytmux.yaml}"
+DRY_RUN=false
+
+# -----------------------------------------------------------------------------
+# Help & Usage
+# -----------------------------------------------------------------------------
+
+show_version() {
+    echo "pimpmytmux v${PIMPMYTMUX_VERSION}"
+}
+
+show_help() {
+    cat << EOF
+${BOLD}pimpmytmux${RESET} - A modern, modular tmux configuration
+
+${BOLD}USAGE:${RESET}
+    pimpmytmux <command> [options]
+
+${BOLD}COMMANDS:${RESET}
+    apply           Generate and apply tmux configuration
+    reload          Reload tmux configuration (inside tmux)
+    theme <name>    Switch to a different theme
+    themes          List available themes
+    session <cmd>   Session management (save, restore, list)
+    layout <name>   Apply a predefined layout
+    layouts         List available layouts
+    edit            Open configuration file in editor
+    check           Validate configuration file
+    status          Show current pimpmytmux status
+    init            Initialize pimpmytmux (create config if missing)
+    wizard          Interactive setup wizard
+    setup           Quick setup with defaults
+    help            Show this help message
+    version         Show version
+
+${BOLD}OPTIONS:${RESET}
+    -c, --config <file>    Use custom config file
+    -v, --verbose          Enable verbose output
+    -d, --debug            Enable debug output
+    --dry-run              Show what would be done without doing it
+    -q, --quiet            Suppress non-error output
+    -h, --help             Show help for a command
+
+${BOLD}EXAMPLES:${RESET}
+    pimpmytmux apply                  # Generate and apply config
+    pimpmytmux theme cyberpunk        # Switch to cyberpunk theme
+    pimpmytmux session save mywork    # Save current session
+    pimpmytmux session restore mywork # Restore saved session
+    pimpmytmux layout dev-fullstack   # Apply fullstack dev layout
+    pimpmytmux wizard                 # Run interactive setup wizard
+    pimpmytmux setup                  # Quick setup with defaults
+    pimpmytmux edit                   # Edit configuration
+    pimpmytmux check                  # Validate config file
+
+${BOLD}FILES:${RESET}
+    Config:    ${PIMPMYTMUX_CONFIG_DIR}/pimpmytmux.yaml
+    Generated: ${PIMPMYTMUX_CONFIG_DIR}/tmux.conf
+
+For more information, visit: https://github.com/[user]/pimpmytmux
+EOF
+}
+
+# -----------------------------------------------------------------------------
+# Commands
+# -----------------------------------------------------------------------------
+
+## Initialize pimpmytmux - create directories and example config
+cmd_init() {
+    log_info "Initializing pimpmytmux..."
+
+    # Create directories
+    init_directories
+
+    # Copy example config if not exists
+    if [[ ! -f "$PIMPMYTMUX_CONFIG_FILE" ]]; then
+        local example="${PIMPMYTMUX_ROOT}/pimpmytmux.yaml.example"
+        if [[ -f "$example" ]]; then
+            cp "$example" "$PIMPMYTMUX_CONFIG_FILE"
+            log_success "Created config: $PIMPMYTMUX_CONFIG_FILE"
+        else
+            log_warn "Example config not found, creating minimal config"
+            cat > "$PIMPMYTMUX_CONFIG_FILE" << 'EOF'
+# pimpmytmux configuration
+theme: cyberpunk
+
+general:
+  prefix: C-b
+  mouse: true
+  base_index: 1
+
+modules:
+  sessions:
+    enabled: true
+  navigation:
+    enabled: true
+    vim_mode: true
+  monitoring:
+    enabled: true
+EOF
+            log_success "Created minimal config: $PIMPMYTMUX_CONFIG_FILE"
+        fi
+    else
+        log_info "Config already exists: $PIMPMYTMUX_CONFIG_FILE"
+    fi
+
+    log_success "pimpmytmux initialized!"
+    log_info "Run 'pimpmytmux apply' to generate tmux configuration"
+}
+
+## Apply configuration - generate tmux.conf and optionally reload
+cmd_apply() {
+    log_info "Applying pimpmytmux configuration..."
+
+    # Check if config exists
+    if [[ ! -f "$PIMPMYTMUX_CONFIG_FILE" ]]; then
+        log_error "Config file not found: $PIMPMYTMUX_CONFIG_FILE"
+        log_info "Run 'pimpmytmux init' to create a default config"
+        exit 1
+    fi
+
+    # Generate configuration
+    local output_file
+    output_file=$(get_tmux_conf_path)
+
+    if ! generate_tmux_conf "$PIMPMYTMUX_CONFIG_FILE" "$output_file" "$DRY_RUN"; then
+        log_error "Failed to generate configuration"
+        exit 1
+    fi
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        return 0
+    fi
+
+    # Setup symlink
+    setup_tmux_conf_symlink
+
+    # Reload if inside tmux
+    if is_inside_tmux; then
+        reload_tmux
+    else
+        log_info "Not inside tmux. Start tmux to use the new configuration."
+    fi
+
+    log_success "Configuration applied!"
+}
+
+## Reload tmux configuration
+cmd_reload() {
+    if ! is_inside_tmux; then
+        log_error "Not inside a tmux session"
+        exit 1
+    fi
+
+    reload_tmux
+}
+
+## Switch theme
+cmd_theme() {
+    local theme_name="${1:-}"
+
+    if [[ -z "$theme_name" ]]; then
+        log_error "Theme name required"
+        log_info "Usage: pimpmytmux theme <name>"
+        log_info "Run 'pimpmytmux themes' to list available themes"
+        exit 1
+    fi
+
+    # Check if theme exists
+    local theme_file="${PIMPMYTMUX_ROOT}/themes/${theme_name}.yaml"
+    if [[ ! -f "$theme_file" ]]; then
+        log_error "Theme not found: $theme_name"
+        log_info "Run 'pimpmytmux themes' to list available themes"
+        exit 1
+    fi
+
+    # Update config file to use new theme
+    if check_command yq; then
+        local yq_type
+        yq_type=$(detect_yq_version)
+
+        if [[ "$yq_type" == "go" ]]; then
+            yq eval -i ".theme = \"$theme_name\"" "$PIMPMYTMUX_CONFIG_FILE"
+        else
+            log_warn "yq Python version detected, manual edit required"
+            log_info "Edit $PIMPMYTMUX_CONFIG_FILE and set: theme: $theme_name"
+            exit 1
+        fi
+    else
+        log_warn "yq not installed, using sed fallback"
+        sed -i.bak "s/^theme:.*/theme: $theme_name/" "$PIMPMYTMUX_CONFIG_FILE"
+    fi
+
+    log_success "Theme changed to: $theme_name"
+
+    # Re-apply configuration
+    cmd_apply
+}
+
+## List available themes
+cmd_themes() {
+    echo "${BOLD}Available themes:${RESET}"
+    echo ""
+
+    local themes_dir="${PIMPMYTMUX_ROOT}/themes"
+
+    if [[ ! -d "$themes_dir" ]]; then
+        log_warn "Themes directory not found: $themes_dir"
+        return 1
+    fi
+
+    # Get current theme
+    local current_theme
+    current_theme=$(get_config ".theme" "")
+
+    for theme_file in "$themes_dir"/*.yaml; do
+        if [[ -f "$theme_file" ]]; then
+            local name
+            name=$(basename "$theme_file" .yaml)
+
+            if [[ "$name" == "$current_theme" ]]; then
+                echo "  ${GREEN}*${RESET} ${BOLD}$name${RESET} (current)"
+            else
+                echo "    $name"
+            fi
+        fi
+    done
+
+    echo ""
+    echo "Switch theme with: pimpmytmux theme <name>"
+}
+
+## Edit configuration
+cmd_edit() {
+    local editor="${EDITOR:-${VISUAL:-vim}}"
+
+    if [[ ! -f "$PIMPMYTMUX_CONFIG_FILE" ]]; then
+        log_warn "Config file not found, creating..."
+        cmd_init
+    fi
+
+    log_info "Opening $PIMPMYTMUX_CONFIG_FILE with $editor"
+    "$editor" "$PIMPMYTMUX_CONFIG_FILE"
+
+    # Ask to apply changes
+    if [[ -t 0 ]]; then  # Interactive terminal
+        read -rp "Apply changes? [y/N] " answer
+        if [[ "$answer" =~ ^[Yy]$ ]]; then
+            cmd_apply
+        fi
+    fi
+}
+
+## Check/validate configuration
+cmd_check() {
+    log_info "Checking configuration..."
+
+    if [[ ! -f "$PIMPMYTMUX_CONFIG_FILE" ]]; then
+        log_error "Config file not found: $PIMPMYTMUX_CONFIG_FILE"
+        exit 1
+    fi
+
+    if validate_config "$PIMPMYTMUX_CONFIG_FILE"; then
+        log_success "Configuration is valid"
+
+        # Show some info
+        echo ""
+        echo "${BOLD}Configuration summary:${RESET}"
+        echo "  Theme:  $(get_config '.theme' 'default')"
+        echo "  Prefix: $(get_config '.general.prefix' 'C-b')"
+        echo "  Mouse:  $(get_config '.general.mouse' 'true')"
+
+        # List enabled modules
+        echo ""
+        echo "${BOLD}Enabled modules:${RESET}"
+        for module in sessions navigation devtools monitoring; do
+            if config_enabled ".modules.${module}.enabled"; then
+                echo "  ${GREEN}+${RESET} $module"
+            else
+                echo "  ${DIM}-${RESET} $module"
+            fi
+        done
+    else
+        log_error "Configuration has errors"
+        exit 1
+    fi
+}
+
+## Show status
+cmd_status() {
+    echo "${BOLD}pimpmytmux status${RESET}"
+    echo ""
+
+    # Version
+    echo "Version:    v${PIMPMYTMUX_VERSION}"
+
+    # Platform
+    echo "Platform:   $(get_platform)"
+
+    # tmux version
+    if check_command tmux; then
+        echo "tmux:       $(tmux -V)"
+    else
+        echo "tmux:       ${RED}not installed${RESET}"
+    fi
+
+    # Config file
+    if [[ -f "$PIMPMYTMUX_CONFIG_FILE" ]]; then
+        echo "Config:     ${GREEN}$PIMPMYTMUX_CONFIG_FILE${RESET}"
+    else
+        echo "Config:     ${YELLOW}not found${RESET}"
+    fi
+
+    # Generated config
+    local generated
+    generated=$(get_tmux_conf_path)
+    if [[ -f "$generated" ]]; then
+        echo "Generated:  ${GREEN}$generated${RESET}"
+    else
+        echo "Generated:  ${YELLOW}not found${RESET}"
+    fi
+
+    # Inside tmux?
+    if is_inside_tmux; then
+        echo "Session:    ${GREEN}inside tmux${RESET}"
+    else
+        echo "Session:    outside tmux"
+    fi
+
+    # Dependencies
+    echo ""
+    echo "${BOLD}Dependencies:${RESET}"
+    for dep in yq fzf gum; do
+        if check_command "$dep"; then
+            echo "  ${GREEN}+${RESET} $dep"
+        else
+            echo "  ${DIM}-${RESET} $dep (optional)"
+        fi
+    done
+}
+
+## Session management command
+cmd_session() {
+    local subcmd="${1:-}"
+    shift || true
+
+    case "$subcmd" in
+        save)
+            local name="${1:-}"
+            if [[ -z "$name" ]]; then
+                log_error "Session name required"
+                log_info "Usage: pimpmytmux session save <name>"
+                exit 1
+            fi
+            if ! is_inside_tmux; then
+                log_error "Must be inside tmux to save session"
+                exit 1
+            fi
+            save_session "$name"
+            ;;
+        restore)
+            local name="${1:-}"
+            if [[ -z "$name" ]]; then
+                log_error "Session name required"
+                log_info "Usage: pimpmytmux session restore <name>"
+                exit 1
+            fi
+            restore_session "$name"
+            ;;
+        list)
+            list_saved_sessions
+            ;;
+        "")
+            log_error "Subcommand required"
+            echo ""
+            echo "Usage: pimpmytmux session <command>"
+            echo ""
+            echo "Commands:"
+            echo "    save <name>     Save current session"
+            echo "    restore <name>  Restore a saved session"
+            echo "    list            List saved sessions"
+            exit 1
+            ;;
+        *)
+            log_error "Unknown session command: $subcmd"
+            exit 1
+            ;;
+    esac
+}
+
+## Layout command
+cmd_layout() {
+    local layout_name="${1:-}"
+
+    if [[ -z "$layout_name" ]]; then
+        log_error "Layout name required"
+        log_info "Usage: pimpmytmux layout <name>"
+        log_info "Run 'pimpmytmux layouts' to list available layouts"
+        exit 1
+    fi
+
+    if ! is_inside_tmux; then
+        log_error "Must be inside tmux to apply layout"
+        exit 1
+    fi
+
+    apply_layout "$layout_name"
+}
+
+## List available layouts
+cmd_layouts() {
+    echo "${BOLD}Available layouts:${RESET}"
+    echo ""
+
+    local templates_dir="${PIMPMYTMUX_ROOT}/templates"
+
+    if [[ ! -d "$templates_dir" ]]; then
+        log_warn "Templates directory not found: $templates_dir"
+        return 1
+    fi
+
+    for layout_file in "$templates_dir"/*.yaml; do
+        if [[ -f "$layout_file" ]]; then
+            local name desc
+            name=$(basename "$layout_file" .yaml)
+            desc=$(yq_get "$layout_file" ".description" 2>/dev/null || echo "")
+
+            echo "  ${CYAN}$name${RESET}"
+            if [[ -n "$desc" ]]; then
+                echo "      $desc"
+            fi
+        fi
+    done
+
+    echo ""
+    echo "Apply layout with: pimpmytmux layout <name>"
+}
+
+# -----------------------------------------------------------------------------
+# Argument Parsing
+# -----------------------------------------------------------------------------
+
+parse_args() {
+    local command=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -c|--config)
+                PIMPMYTMUX_CONFIG_FILE="$2"
+                shift 2
+                ;;
+            -v|--verbose)
+                PIMPMYTMUX_VERBOSITY=2
+                shift
+                ;;
+            -d|--debug)
+                PIMPMYTMUX_VERBOSITY=3
+                shift
+                ;;
+            -q|--quiet)
+                PIMPMYTMUX_VERBOSITY=0
+                shift
+                ;;
+            --dry-run)
+                DRY_RUN=true
+                shift
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            --version)
+                show_version
+                exit 0
+                ;;
+            -*)
+                log_error "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+            *)
+                if [[ -z "$command" ]]; then
+                    command="$1"
+                    shift
+                    break  # Remaining args go to command
+                fi
+                ;;
+        esac
+    done
+
+    # Default to help if no command
+    if [[ -z "$command" ]]; then
+        show_help
+        exit 0
+    fi
+
+    # Execute command
+    case "$command" in
+        apply)
+            cmd_apply "$@"
+            ;;
+        reload)
+            cmd_reload "$@"
+            ;;
+        theme)
+            cmd_theme "$@"
+            ;;
+        themes|list-themes)
+            cmd_themes "$@"
+            ;;
+        session)
+            cmd_session "$@"
+            ;;
+        layout)
+            cmd_layout "$@"
+            ;;
+        layouts|list-layouts)
+            cmd_layouts "$@"
+            ;;
+        edit)
+            cmd_edit "$@"
+            ;;
+        check|validate)
+            cmd_check "$@"
+            ;;
+        status)
+            cmd_status "$@"
+            ;;
+        init)
+            cmd_init "$@"
+            ;;
+        wizard)
+            run_wizard "$@"
+            ;;
+        setup|quick-setup)
+            quick_setup "$@"
+            ;;
+        help)
+            show_help
+            ;;
+        version)
+            show_version
+            ;;
+        *)
+            log_error "Unknown command: $command"
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
+
+main() {
+    parse_args "$@"
+}
+
+main "$@"

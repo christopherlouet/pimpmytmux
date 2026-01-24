@@ -1,0 +1,39 @@
+# Cyberpunk Theme for pimpmytmux
+# Neon blue, pink, and purple - Night City vibes
+
+name: Cyberpunk
+description: Neon lights in the rain - Night City aesthetic
+
+colors:
+  bg: "#0d0d1a"
+  fg: "#e0e0ff"
+  accent: "#00ffff"      # Cyan neon
+  accent2: "#ff00ff"     # Magenta neon
+  warning: "#ffff00"     # Yellow warning
+  error: "#ff0040"       # Red alert
+  success: "#00ff88"     # Green success
+  comment: "#6272a4"     # Muted purple
+  selection: "#1a1a3e"   # Dark purple selection
+  border: "#2a2a4e"      # Purple border
+
+separators:
+  left: ""              # Powerline arrow right
+  right: ""             # Powerline arrow left
+  left_alt: ""          # Powerline arrow right alt
+  right_alt: ""         # Powerline arrow left alt
+
+icons:
+  session: ""           # Terminal
+  window: ""            # Window
+  pane: ""              # Layout
+  git: ""              # Git branch
+  time: ""              # Clock
+  cpu: ""              # CPU/chip
+  memory: ""            # Memory
+  battery: ""           # Battery
+  network: "󰖩"           # Network
+
+status_bar:
+  style: powerline       # powerline, blocks, minimal
+  show_prefix: true
+  show_mode: true

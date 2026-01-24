@@ -1,0 +1,25 @@
+# Writing Layout Template
+# Single maximized pane for distraction-free writing
+
+name: Writing
+description: Single pane zen mode
+
+layout:
+  orientation: horizontal
+  panes:
+    - size: 100%
+      name: editor
+      command: ""
+      focus: true
+
+# Settings for this layout
+settings:
+  # Hide status bar for zen mode (optional)
+  status_bar: false
+  # Larger font if supported
+  zen_mode: true
+
+# Suitable for documentation, notes
+auto_apply: []
+
+keybinding: "M-4"

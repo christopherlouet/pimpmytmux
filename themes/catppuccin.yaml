@@ -1,0 +1,50 @@
+# Catppuccin Mocha Theme for pimpmytmux
+# Soothing pastel theme for the high-spirited - https://catppuccin.com
+
+name: Catppuccin
+description: Soothing pastel colors - Mocha variant
+
+colors:
+  bg: "#1e1e2e"          # Base
+  fg: "#cdd6f4"          # Text
+  accent: "#89b4fa"      # Blue
+  accent2: "#f5c2e7"     # Pink
+  warning: "#f9e2af"     # Yellow
+  error: "#f38ba8"       # Red
+  success: "#a6e3a1"     # Green
+  comment: "#6c7086"     # Overlay0
+  selection: "#313244"   # Surface0
+  border: "#45475a"      # Surface1
+
+# Additional Catppuccin Mocha colors:
+# rosewater: "#f5e0dc"
+# flamingo: "#f2cdcd"
+# mauve: "#cba6f7"
+# maroon: "#eba0ac"
+# peach: "#fab387"
+# teal: "#94e2d5"
+# sky: "#89dceb"
+# sapphire: "#74c7ec"
+# lavender: "#b4befe"
+
+separators:
+  left: ""
+  right: ""
+  left_alt: ""
+  right_alt: ""
+
+icons:
+  session: "󰄛"            # Cat face
+  window: ""
+  pane: ""
+  git: ""
+  time: ""
+  cpu: ""
+  memory: ""
+  battery: ""
+  network: "󰖩"
+
+status_bar:
+  style: powerline
+  show_prefix: true
+  show_mode: true

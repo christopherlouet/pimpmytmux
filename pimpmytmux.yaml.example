@@ -1,0 +1,238 @@
+# pimpmytmux configuration
+# Copy this file to ~/.config/pimpmytmux/pimpmytmux.yaml and customize
+# Documentation: https://github.com/[user]/pimpmytmux
+
+# =============================================================================
+# Theme
+# =============================================================================
+# Available themes: cyberpunk, matrix, dracula, catppuccin, nord, gruvbox, tokyo-night
+# Or specify a path to a custom theme file
+theme: cyberpunk
+
+# =============================================================================
+# General Settings
+# =============================================================================
+general:
+  # Prefix key (default: C-b, popular alternative: C-a)
+  prefix: C-b
+
+  # Secondary prefix (leave empty to disable)
+  prefix2: ""
+
+  # Base index for windows and panes (0 or 1)
+  base_index: 1
+
+  # Enable mouse support
+  mouse: true
+
+  # History limit (number of lines)
+  history_limit: 50000
+
+  # Escape time in milliseconds (lower = faster vim response)
+  escape_time: 10
+
+  # Enable focus events (useful for vim autoread)
+  focus_events: true
+
+  # Enable 24-bit (true color) support
+  true_color: true
+
+  # Default terminal (recommended: tmux-256color or screen-256color)
+  default_terminal: "tmux-256color"
+
+# =============================================================================
+# Status Bar
+# =============================================================================
+status_bar:
+  # Position: top or bottom
+  position: bottom
+
+  # Update interval in seconds
+  interval: 5
+
+  # Left side content
+  # Available variables: #{session}, #{window}, #{pane}, #{prefix}, #{mouse}
+  # Available modules: #{git_branch}, #{git_status}, #{cpu}, #{memory}, #{battery}, #{network}, #{weather}, #{time}, #{date}
+  left: " #{session_icon} #S | #{window_icon} #I:#W "
+
+  # Right side content
+  right: "#{prefix}#{mouse} #{git_branch} | #{cpu} #{memory} | %H:%M %d-%b "
+
+  # Left section max length
+  left_length: 40
+
+  # Right section max length
+  right_length: 80
+
+# =============================================================================
+# Modules
+# =============================================================================
+modules:
+  # Session management (save/restore sessions automatically)
+  sessions:
+    enabled: true
+    # Auto-save sessions on exit
+    auto_save: true
+    # Auto-restore last session on start
+    auto_restore: true
+    # Save interval in minutes (0 = only on exit)
+    save_interval: 15
+
+  # Navigation enhancements
+  navigation:
+    enabled: true
+    # Vim-style pane navigation (hjkl)
+    vim_mode: true
+    # fzf integration for session/window/pane switching
+    fzf_integration: true
+    # Smart pane switching (integrates with vim-tmux-navigator)
+    smart_splits: true
+
+  # Developer tools
+  devtools:
+    enabled: true
+    # Show git branch/status in status bar
+    git_status: true
+    # IDE-like split layouts
+    ide_splits: true
+    # Auto-detect project type and apply template
+    project_detection: false
+
+  # System monitoring widgets
+  monitoring:
+    enabled: true
+    # Components to show (order matters)
+    components:
+      - cpu
+      - memory
+      - battery
+    # Show network info
+    network: false
+    # Show weather (requires internet)
+    weather: false
+
+# =============================================================================
+# Keybindings
+# =============================================================================
+keybindings:
+  # Preset: default, vim-heavy, minimal
+  # Use 'custom' to define your own below
+  preset: default
+
+  # Reload configuration
+  reload: r
+
+  # Split panes
+  split_horizontal: "|"
+  split_vertical: "-"
+
+  # Pane navigation (when vim_mode is enabled, these use hjkl)
+  # Otherwise uses arrow keys
+
+  # Window navigation
+  next_window: "n"
+  prev_window: "p"
+  last_window: "l"
+
+  # Session navigation (with fzf if enabled)
+  switch_session: "s"
+
+  # Pane operations
+  zoom_pane: "z"
+  close_pane: "x"
+
+  # Copy mode
+  copy_mode: "["
+  paste: "]"
+
+# =============================================================================
+# Window & Pane Settings
+# =============================================================================
+windows:
+  # Automatically renumber windows when one is closed
+  renumber: true
+
+  # Automatically rename windows based on current command
+  auto_rename: true
+
+  # Format for window status
+  format: "#I:#W#{?window_flags,#{window_flags}, }"
+
+  # Format for current window
+  current_format: "#I:#W#{?window_flags,#{window_flags}, }"
+
+panes:
+  # Show pane border
+  border: true
+
+  # Border style: single, double, heavy, simple, number
+  border_style: single
+
+  # Display pane numbers timeout (milliseconds)
+  display_time: 2000
+
+  # New pane retains current path
+  retain_path: true
+
+# =============================================================================
+# Plugins (TPM)
+# =============================================================================
+# Plugins are managed via TPM (Tmux Plugin Manager)
+# They will be auto-installed on first run
+plugins:
+  enabled: true
+
+  # Auto-update plugins on reload
+  auto_update: false
+
+  # List of plugins to install
+  # Format: "github-user/repo" or full git URL
+  list: []
+    # Uncomment to enable popular plugins:
+    # - tmux-plugins/tmux-sensible
+    # - tmux-plugins/tmux-yank
+    # - christoomey/vim-tmux-navigator
+
+# =============================================================================
+# Custom Commands
+# =============================================================================
+# Define custom shell functions available in status bar
+# These run periodically based on status_bar.interval
+custom:
+  # Example: Show Kubernetes context
+  # kube_context: "kubectl config current-context 2>/dev/null || echo 'N/A'"
+
+  # Example: Show Docker container count
+  # docker_count: "docker ps -q 2>/dev/null | wc -l | tr -d ' '"
+
+# =============================================================================
+# Hooks
+# =============================================================================
+# Commands to run on specific tmux events
+hooks:
+  # Run after creating a new session
+  # after_new_session: ""
+
+  # Run after creating a new window
+  # after_new_window: ""
+
+  # Run before tmux exits
+  # before_exit: ""
+
+# =============================================================================
+# Platform-specific overrides
+# =============================================================================
+# These settings override the above for specific platforms
+platform:
+  macos:
+    # Fix clipboard on macOS
+    # copy_command: "pbcopy"
+    # paste_command: "pbpaste"
+
+  linux:
+    # Use xclip or xsel for clipboard
+    # copy_command: "xclip -selection clipboard"
+
+  wsl:
+    # Use clip.exe for Windows clipboard
+    # copy_command: "clip.exe"
