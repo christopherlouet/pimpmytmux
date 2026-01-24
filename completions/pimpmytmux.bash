@@ -10,7 +10,7 @@ _pimpmytmux_completions() {
     _init_completion || return
 
     # Main commands
-    local commands="apply reload theme themes profile session template layout layouts zen backup sync plugin detect edit check status init wizard setup help version"
+    local commands="apply reload theme themes profile session template layout layouts zen backup sync plugin detect migrate edit check status init wizard setup help version"
 
     # Profile subcommands
     local profile_cmds="list switch create delete"

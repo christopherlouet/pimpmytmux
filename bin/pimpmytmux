@@ -33,6 +33,7 @@ load_lib "detect" "optional"
 load_lib "sync" "optional"
 load_lib "conditional" "optional"
 load_lib "plugins" "optional"
+load_lib "migrate" "optional"
 load_lib "wizard" "optional"
 
 # Load session modules (optional)
@@ -78,6 +79,7 @@ ${BOLD}COMMANDS:${RESET}
     sync <cmd>      Sync configuration via git (init, push, pull, status)
     plugin <cmd>    Plugin management (list, install, remove, update)
     detect [path]   Detect project type and show info
+    migrate         Migrate configuration to latest version
     edit            Open configuration file in editor
     check           Validate configuration file
     status          Show current pimpmytmux status
@@ -728,6 +730,54 @@ cmd_detect() {
     fi
 }
 
+## Migrate configuration
+cmd_migrate() {
+    local show_status=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --status)
+                show_status=true
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
+    if ! check_command migrate_config; then
+        log_error "Migration not available (lib/migrate.sh not loaded)"
+        exit 1
+    fi
+
+    if [[ "$show_status" == "true" ]]; then
+        migration_status
+        return 0
+    fi
+
+    # Check if migration is needed
+    if ! needs_migration; then
+        log_info "Configuration is already up to date"
+        migration_status
+        return 0
+    fi
+
+    # Confirm migration
+    echo ""
+    log_warn "This will migrate your configuration to version $PIMPMYTMUX_VERSION"
+    echo ""
+    echo -n "Continue? [y/N] "
+    read -r confirm
+
+    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+        log_info "Migration cancelled"
+        return 0
+    fi
+
+    migrate_config
+}
+
 ## Sync configuration via git
 cmd_sync() {
     local subcmd="${1:-}"
@@ -1232,6 +1282,9 @@ parse_args() {
             ;;
         detect)
             cmd_detect "$@"
+            ;;
+        migrate)
+            cmd_migrate "$@"
             ;;
         init)
             cmd_init "$@"

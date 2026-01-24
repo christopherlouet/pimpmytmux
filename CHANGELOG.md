@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `release.yml`: Automatic releases on version tags
   - Shellcheck integration for code quality
   - Test coverage reporting
+- **Configuration migration** (`lib/migrate.sh`): Automatic config upgrades
+  - `pimpmytmux migrate`: Migrate config to latest version
+  - `pimpmytmux migrate --status`: Show migration status
+  - Automatic backup before migration
+  - Rollback support
+  - Version comparison utilities
 
 ## [0.5.0] - 2026-01-24
 

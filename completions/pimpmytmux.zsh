@@ -83,6 +83,7 @@ _pimpmytmux() {
                 'sync:Sync configuration via git'
                 'plugin:Plugin management'
                 'detect:Detect project type'
+                'migrate:Migrate configuration to latest version'
                 'edit:Open configuration file in editor'
                 'check:Validate configuration file'
                 'status:Show current status'
