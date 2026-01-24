@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-01-24
+
+### Added
+- **Profile system** (`lib/profiles.sh`): Multiple configurations for different contexts
+  - `pimpmytmux profile list`: Show all profiles with current marked
+  - `pimpmytmux profile switch <name>`: Switch to different profile
+  - `pimpmytmux profile create <name> [--from]`: Create new profile
+  - `pimpmytmux profile delete <name>`: Delete profile (with confirmation)
+  - Profiles stored in `~/.config/pimpmytmux/profiles/`
+- **Project detection** (`lib/detect.sh`): Auto-detect project type and recommend layout
+  - `pimpmytmux detect [path]`: Show project info
+  - `pimpmytmux detect --apply`: Apply recommended layout
+  - Supports: Node.js, Rust, Go, Python, Ruby, Java, PHP, Elixir
+  - Auto-detects dev/test/build commands per project type
+- **Session templates** (`modules/sessions/templates.sh`): Multi-window session creation
+  - `pimpmytmux template list`: Show available templates
+  - `pimpmytmux template apply <name>`: Create session from template
+  - `pimpmytmux template save <name>`: Save current session as template
+  - `pimpmytmux template init`: Create example templates
+  - Variable substitution: `${PROJECT_NAME}`, `${PROJECT_ROOT}`, `${EDITOR}`
+
 ## [0.4.0] - 2026-01-24
 
 ### Added
