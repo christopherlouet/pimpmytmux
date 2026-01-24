@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `pimpmytmux plugin enable/disable`: Enable or disable plugins
   - Plugin hooks: `on_install`, `on_remove`, `on_apply`, `on_reload`
   - Plugin structure: `plugin.yaml` + optional scripts
+  - Developer guide: `plugins/README.md`
+- **CI/CD Pipelines** (`.github/workflows/`): Automated testing and releases
+  - `test.yml`: BATS tests on push/PR, multi-platform (Ubuntu, macOS)
+  - `release.yml`: Automatic releases on version tags
+  - Shellcheck integration for code quality
+  - Test coverage reporting
 
 ## [0.5.0] - 2026-01-24
 

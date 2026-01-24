@@ -1,0 +1,97 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Shellcheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './lib'
+          additional_files: 'bin/pimpmytmux'
+        env:
+          SHELLCHECK_OPTS: -e SC1090 -e SC1091
+
+      - name: Shellcheck modules
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './modules'
+        env:
+          SHELLCHECK_OPTS: -e SC1090 -e SC1091
+
+  test:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tmux
+          # Install yq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          # Install BATS
+          git clone https://github.com/bats-core/bats-core.git /tmp/bats
+          sudo /tmp/bats/install.sh /usr/local
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install tmux yq bats-core
+
+      - name: Run tests
+        run: bats tests/*.bats
+
+      - name: Test version command
+        run: ./bin/pimpmytmux version
+
+      - name: Test help command
+        run: ./bin/pimpmytmux help
+
+      - name: Test status command
+        run: ./bin/pimpmytmux status
+
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tmux
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          git clone https://github.com/bats-core/bats-core.git /tmp/bats
+          sudo /tmp/bats/install.sh /usr/local
+
+      - name: Count tests
+        run: |
+          TOTAL=$(bats tests/*.bats --count)
+          echo "Total tests: $TOTAL"
+          echo "TOTAL_TESTS=$TOTAL" >> $GITHUB_ENV
+
+      - name: Run tests with TAP output
+        run: bats tests/*.bats --tap
