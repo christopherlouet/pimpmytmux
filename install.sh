@@ -480,7 +480,11 @@ EOF
     if [[ -d "${PIMPMYTMUX_INSTALL_DIR}/.git" ]]; then
         info "Updating pimpmytmux..."
         cd "$PIMPMYTMUX_INSTALL_DIR"
-        git pull --quiet
+        # Ensure remote is configured and pull from origin main
+        if ! git remote get-url origin &>/dev/null; then
+            git remote add origin "$PIMPMYTMUX_REPO"
+        fi
+        git pull origin main --quiet
         success "Updated to latest version"
     else
         # Check if we're running from the repo
