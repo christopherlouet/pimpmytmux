@@ -123,21 +123,34 @@ apply_layout_dev_api() {
     log_success "Applied dev-api layout"
 }
 
-## Apply monitoring layout: 4 panes
+## Apply monitoring layout: 4 panes (2x2 grid)
+## Top-left: htop, Bottom-left: logs, Top-right: disk/memory stats, Bottom-right: network
 apply_layout_monitoring() {
     local cwd="${1:-$(pwd)}"
 
-    # Create 2x2 grid
+    # Get the current pane as base
+    local base_pane
+    base_pane=$(tmux display-message -p '#{pane_id}')
+
+    # Create 2x2 grid and send commands immediately after each split
+    # Pane 0 (current): top-left - htop
+    tmux send-keys -t "$base_pane" "htop 2>/dev/null || top" Enter
+
+    # Split right: top-right - disk/memory stats
     tmux split-window -h -c "$cwd"
-    tmux split-window -v -c "$cwd"
-    tmux select-pane -t 0
-    tmux split-window -v -c "$cwd"
+    tmux send-keys "watch -n 2 'df -h; echo; free -h'" Enter
 
-    # Optionally start monitoring tools
-    tmux send-keys -t 0 "htop 2>/dev/null || top" Enter
-    tmux send-keys -t 2 "echo 'Logs pane - tail -f your-log-file'" Enter
+    # Split down from top-right: bottom-right - network
+    tmux split-window -v -c "$cwd"
+    tmux send-keys "watch -n 1 'ss -tuln 2>/dev/null || netstat -tuln'" Enter
 
-    tmux select-pane -t 0
+    # Go back to top-left and split down: bottom-left - logs
+    tmux select-pane -t "$base_pane"
+    tmux split-window -v -c "$cwd"
+    tmux send-keys "journalctl -f 2>/dev/null || dmesg -w 2>/dev/null || tail -f /var/log/syslog 2>/dev/null || echo 'No log source available'" Enter
+
+    # Return to top-left (htop)
+    tmux select-pane -t "$base_pane"
     log_success "Applied monitoring layout"
 }
 
