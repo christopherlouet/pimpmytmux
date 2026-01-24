@@ -15,6 +15,7 @@ Complete guide to using and configuring pimpmytmux.
   - [Status Bar](#status-bar)
   - [Modules](#modules)
   - [Keybindings](#keybindings)
+  - [Conditional Keybindings](#conditional-keybindings)
 - [Themes](#themes)
   - [Available Themes](#available-themes)
   - [Switching Themes](#switching-themes)
@@ -27,6 +28,12 @@ Complete guide to using and configuring pimpmytmux.
   - [Saving Sessions](#saving-sessions)
   - [Restoring Sessions](#restoring-sessions)
   - [Auto Save/Restore](#auto-saverestore)
+- [Session Templates](#session-templates)
+- [Profiles](#profiles)
+- [Project Detection](#project-detection)
+- [Git Sync](#git-sync)
+- [Plugins](#plugins)
+- [Backup and Migration](#backup-and-migration)
 - [Keybindings](#keybindings-1)
   - [Default Keybindings](#default-keybindings)
   - [Vim Mode](#vim-mode)
@@ -90,6 +97,8 @@ pimpmytmux apply
 
 ## Commands Reference
 
+### Core Commands
+
 | Command | Description |
 |---------|-------------|
 | `pimpmytmux apply` | Generate and apply tmux configuration |
@@ -97,17 +106,75 @@ pimpmytmux apply
 | `pimpmytmux edit` | Open configuration file in $EDITOR |
 | `pimpmytmux check` | Validate configuration file |
 | `pimpmytmux status` | Show current status and config |
-| `pimpmytmux theme <name>` | Switch to a different theme |
-| `pimpmytmux themes` | List all available themes |
-| `pimpmytmux layout <name>` | Apply a predefined layout |
-| `pimpmytmux layouts` | List all available layouts |
-| `pimpmytmux zen [on\|off]` | Toggle zen mode (hide status bar + borders) |
-| `pimpmytmux session save <name>` | Save current session |
-| `pimpmytmux session restore <name>` | Restore a saved session |
-| `pimpmytmux session list` | List all saved sessions |
 | `pimpmytmux wizard` | Run interactive setup wizard |
 | `pimpmytmux setup` | Quick setup with defaults |
 | `pimpmytmux init` | Initialize configuration |
+
+### Themes and Layouts
+
+| Command | Description |
+|---------|-------------|
+| `pimpmytmux theme <name>` | Switch to a different theme |
+| `pimpmytmux theme <name> --preview` | Preview theme before applying |
+| `pimpmytmux themes` | List all available themes |
+| `pimpmytmux themes --gallery` | Visual theme browser with swatches |
+| `pimpmytmux layout <name>` | Apply a predefined layout |
+| `pimpmytmux layout <name> --preview` | Preview layout with ASCII diagram |
+| `pimpmytmux layouts` | List all available layouts |
+| `pimpmytmux zen [on\|off]` | Toggle zen mode (hide status bar + borders) |
+
+### Session Management
+
+| Command | Description |
+|---------|-------------|
+| `pimpmytmux session save <name>` | Save current session |
+| `pimpmytmux session restore <name>` | Restore a saved session |
+| `pimpmytmux session list` | List all saved sessions |
+| `pimpmytmux template list` | List session templates |
+| `pimpmytmux template apply <name>` | Create session from template |
+| `pimpmytmux template save <name>` | Save current session as template |
+
+### Profiles
+
+| Command | Description |
+|---------|-------------|
+| `pimpmytmux profile list` | List available profiles |
+| `pimpmytmux profile switch <name>` | Switch to a profile |
+| `pimpmytmux profile create <name>` | Create new profile |
+| `pimpmytmux profile delete <name>` | Delete a profile |
+
+### Sync and Backup
+
+| Command | Description |
+|---------|-------------|
+| `pimpmytmux sync init <repo>` | Initialize git sync |
+| `pimpmytmux sync push [message]` | Push config to remote |
+| `pimpmytmux sync pull` | Pull config from remote |
+| `pimpmytmux sync status` | Show sync status |
+| `pimpmytmux backup list` | List available backups |
+| `pimpmytmux backup restore <name>` | Restore a backup |
+| `pimpmytmux backup create` | Create manual backup |
+| `pimpmytmux backup cleanup [n]` | Keep only n most recent backups |
+
+### Plugins
+
+| Command | Description |
+|---------|-------------|
+| `pimpmytmux plugin list` | List installed plugins |
+| `pimpmytmux plugin install <url>` | Install plugin from git URL |
+| `pimpmytmux plugin remove <name>` | Remove a plugin |
+| `pimpmytmux plugin update` | Update all plugins |
+| `pimpmytmux plugin enable <name>` | Enable a plugin |
+| `pimpmytmux plugin disable <name>` | Disable a plugin |
+
+### Utilities
+
+| Command | Description |
+|---------|-------------|
+| `pimpmytmux detect` | Detect project type |
+| `pimpmytmux detect --apply` | Auto-apply recommended layout |
+| `pimpmytmux migrate` | Migrate config to latest version |
+| `pimpmytmux migrate --status` | Show migration status |
 
 ---
 
@@ -242,6 +309,41 @@ keybindings:
   zoom_pane: z           # prefix + z to zoom pane
   close_pane: x          # prefix + x to close pane
 ```
+
+### Conditional Keybindings
+
+Define keybindings that only apply in specific contexts:
+
+```yaml
+keybindings:
+  conditional:
+    # Different bindings per hostname
+    - condition: "hostname:work-*"
+      bindings:
+        prefix: C-a
+        split_horizontal: "v"
+
+    # Different bindings per project type
+    - condition: "project:node"
+      bindings:
+        F5: "run-shell 'npm test'"
+        F6: "run-shell 'npm start'"
+
+    - condition: "project:rust"
+      bindings:
+        F5: "run-shell 'cargo test'"
+        F6: "run-shell 'cargo run'"
+
+    # Different bindings based on environment
+    - condition: "env:SSH_CONNECTION"
+      bindings:
+        prefix: C-a  # Use C-a when SSH'd
+```
+
+**Condition types:**
+- `hostname:<pattern>` - Match hostname with wildcards
+- `project:<type>` - Match detected project type (node, rust, go, python, etc.)
+- `env:<VAR>` or `env:<VAR>=<value>` - Match environment variables
 
 ---
 
@@ -481,6 +583,242 @@ modules:
     auto_restore: true   # Restores last session when starting
     save_interval: 15    # Auto-save every 15 minutes
 ```
+
+---
+
+## Session Templates
+
+Session templates let you create multi-window sessions with predefined layouts and commands.
+
+### Using Templates
+
+```bash
+# List available templates
+pimpmytmux template list
+
+# Create session from template
+pimpmytmux template apply web-dev
+
+# Save current session as template
+pimpmytmux template save mytemplate
+
+# Initialize example templates
+pimpmytmux template init
+```
+
+### Template Format
+
+Templates are YAML files in `~/.config/pimpmytmux/session-templates/`:
+
+```yaml
+name: web-dev
+description: Web development session
+
+# Variable substitution (prompted at apply time)
+variables:
+  PROJECT_NAME: "myproject"
+  PROJECT_ROOT: "~/projects/${PROJECT_NAME}"
+
+windows:
+  - name: editor
+    layout: main-vertical
+    panes:
+      - command: "${EDITOR:-vim} ."
+        path: "${PROJECT_ROOT}"
+      - command: "npm run dev"
+        path: "${PROJECT_ROOT}"
+
+  - name: terminal
+    panes:
+      - command: ""
+        path: "${PROJECT_ROOT}"
+
+  - name: logs
+    panes:
+      - command: "tail -f logs/app.log"
+        path: "${PROJECT_ROOT}"
+```
+
+---
+
+## Profiles
+
+Profiles let you maintain multiple configurations for different contexts (work, personal, etc.).
+
+### Managing Profiles
+
+```bash
+# List all profiles (current marked with *)
+pimpmytmux profile list
+
+# Switch to a profile
+pimpmytmux profile switch work
+
+# Create new profile
+pimpmytmux profile create personal
+
+# Create from existing profile
+pimpmytmux profile create work-dark --from work
+
+# Delete a profile
+pimpmytmux profile delete old-profile
+```
+
+### Profile Storage
+
+Profiles are stored in `~/.config/pimpmytmux/profiles/`:
+```
+profiles/
+├── work/
+│   └── pimpmytmux.yaml
+├── personal/
+│   └── pimpmytmux.yaml
+└── current -> work/      # Symlink to active profile
+```
+
+---
+
+## Project Detection
+
+Automatically detect project type and apply appropriate settings.
+
+### Using Detection
+
+```bash
+# Detect current directory
+pimpmytmux detect
+
+# Detect specific path
+pimpmytmux detect ~/projects/myapp
+
+# Auto-apply recommended layout
+pimpmytmux detect --apply
+```
+
+### Supported Project Types
+
+| Type | Detection Files | Recommended Layout |
+|------|-----------------|-------------------|
+| Node.js | `package.json` | dev-fullstack |
+| Rust | `Cargo.toml` | dev-api |
+| Go | `go.mod` | dev-api |
+| Python | `setup.py`, `pyproject.toml` | dev-api |
+| Ruby | `Gemfile` | dev-fullstack |
+| Java | `pom.xml`, `build.gradle` | dev-api |
+| PHP | `composer.json` | dev-fullstack |
+| Elixir | `mix.exs` | dev-api |
+
+---
+
+## Git Sync
+
+Synchronize your configuration across machines using a git repository.
+
+### Setup
+
+```bash
+# Initialize sync with a git repository
+pimpmytmux sync init git@github.com:user/pimpmytmux-config.git
+
+# Check sync status
+pimpmytmux sync status
+```
+
+### Daily Usage
+
+```bash
+# Push local changes
+pimpmytmux sync push "Updated theme to dracula"
+
+# Pull remote changes
+pimpmytmux sync pull
+```
+
+### What Gets Synced
+
+- `pimpmytmux.yaml` - Main configuration
+- `themes/` - Custom themes
+- `templates/` - Layout templates
+- `session-templates/` - Session templates
+- `profiles/` - All profiles
+
+---
+
+## Plugins
+
+Extend pimpmytmux with community plugins.
+
+### Managing Plugins
+
+```bash
+# List installed plugins
+pimpmytmux plugin list
+
+# Install from git URL
+pimpmytmux plugin install https://github.com/user/pimpmytmux-weather
+
+# Update all plugins
+pimpmytmux plugin update
+
+# Remove a plugin
+pimpmytmux plugin remove weather
+
+# Enable/disable without removing
+pimpmytmux plugin disable weather
+pimpmytmux plugin enable weather
+```
+
+### Plugin Hooks
+
+Plugins can hook into pimpmytmux lifecycle:
+- `on_install` - Run after installation
+- `on_remove` - Run before removal
+- `on_apply` - Run when config is applied
+- `on_reload` - Run when config is reloaded
+
+### Creating Plugins
+
+See [plugins/README.md](plugins/README.md) for the plugin development guide.
+
+---
+
+## Backup and Migration
+
+### Backups
+
+pimpmytmux automatically backs up your configuration before changes.
+
+```bash
+# List available backups
+pimpmytmux backup list
+
+# Create manual backup
+pimpmytmux backup create
+
+# Restore a backup
+pimpmytmux backup restore pimpmytmux.yaml.20260124-143022.bak
+
+# Clean up old backups (keep 5 most recent)
+pimpmytmux backup cleanup 5
+```
+
+### Migration
+
+When upgrading pimpmytmux, migrate your configuration:
+
+```bash
+# Check if migration is needed
+pimpmytmux migrate --status
+
+# Run migration
+pimpmytmux migrate
+```
+
+Migration automatically:
+- Backs up your current config
+- Updates deprecated settings
+- Adds new default values
+- Preserves your customizations
 
 ---
 

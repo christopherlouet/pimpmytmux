@@ -19,6 +19,12 @@ A modern, modular tmux configuration framework. Easy to configure, productivity-
 - **7 beautiful themes** - Cyberpunk, Matrix, Dracula, Catppuccin, Nord, Gruvbox, Tokyo Night
 - **Interactive wizard** - Set up in seconds with guided configuration
 - **Session management** - Save and restore your tmux sessions
+- **Session templates** - Multi-window session creation with variable substitution
+- **Profile system** - Multiple configurations for different contexts (work, personal, etc.)
+- **Plugin system** - Extensible architecture with hooks and custom plugins
+- **Git sync** - Synchronize your configuration across machines
+- **Project detection** - Auto-detect project type and recommend layouts
+- **Conditional keybindings** - Different bindings per hostname, project, or environment
 - **Vim-style navigation** - hjkl pane navigation, vi copy mode
 - **fzf integration** - Fuzzy search for sessions, windows, and panes
 - **Dev layouts** - Pre-configured layouts for development workflows
@@ -66,9 +72,22 @@ pimpmytmux apply
 | `pimpmytmux session save <name>` | Save current session |
 | `pimpmytmux session restore <name>` | Restore a saved session |
 | `pimpmytmux session list` | List saved sessions |
+| `pimpmytmux template list` | List session templates |
+| `pimpmytmux template apply <name>` | Create session from template |
 | `pimpmytmux layout <name>` | Apply a predefined layout |
 | `pimpmytmux layouts` | List available layouts |
 | `pimpmytmux zen [on\|off]` | Toggle zen mode (hide status bar + borders) |
+| `pimpmytmux profile list` | List available profiles |
+| `pimpmytmux profile switch <name>` | Switch to a different profile |
+| `pimpmytmux sync init <repo>` | Initialize git sync with repository |
+| `pimpmytmux sync push` | Push config changes to remote |
+| `pimpmytmux sync pull` | Pull config changes from remote |
+| `pimpmytmux plugin list` | List installed plugins |
+| `pimpmytmux plugin install <url>` | Install plugin from git URL |
+| `pimpmytmux detect` | Detect project type and recommend layout |
+| `pimpmytmux migrate` | Migrate config to latest version |
+| `pimpmytmux backup list` | List available backups |
+| `pimpmytmux backup restore <name>` | Restore a backup |
 | `pimpmytmux wizard` | Run interactive setup wizard |
 | `pimpmytmux setup` | Quick setup with defaults |
 | `pimpmytmux edit` | Edit configuration file |
