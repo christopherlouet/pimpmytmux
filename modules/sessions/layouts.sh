@@ -245,12 +245,12 @@ apply_layout_monitoring() {
     base_pane=$(tmux display-message -p '#{pane_id}')
 
     # Create 2x2 grid and send commands immediately after each split
-    # Pane 0 (current): top-left - htop
-    tmux send-keys -t "$base_pane" "htop 2>/dev/null || top" Enter
+    # Pane 0 (current): top-left - btop (fallback to htop, then top)
+    tmux send-keys -t "$base_pane" "btop 2>/dev/null || htop 2>/dev/null || top" Enter
 
-    # Split right: top-right - disk/memory stats
+    # Split right: top-right - disk/memory stats (duf preferred, fallback to df)
     tmux split-window -h -c "$cwd"
-    tmux send-keys "watch -n 2 'df -h; echo; free -h'" Enter
+    tmux send-keys "duf 2>/dev/null && watch -n 2 'duf; echo; free -h' || watch -n 2 'df -h; echo; free -h'" Enter
 
     # Split down from top-right: bottom-right - network (netstat preferred for process names)
     tmux split-window -v -c "$cwd"
