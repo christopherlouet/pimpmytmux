@@ -101,8 +101,8 @@ generate_pane_management() {
 bind -r o rotate-window
 
 # Swap panes
-bind -r { swap-pane -U
-bind -r } swap-pane -D
+bind -r '{' swap-pane -U
+bind -r '}' swap-pane -D
 
 # Mark and swap panes (like vim marks)
 bind m select-pane -m  # Mark current pane
