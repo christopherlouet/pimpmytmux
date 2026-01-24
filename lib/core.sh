@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # pimpmytmux - Core utility functions
-# https://github.com/[user]/pimpmytmux
+# https://github.com/christopherlouet/pimpmytmux
 
 # Guard against re-sourcing
 [[ -n "${_PIMPMYTMUX_CORE_LOADED:-}" ]] && return 0

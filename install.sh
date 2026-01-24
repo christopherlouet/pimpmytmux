@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # pimpmytmux installer
-# https://github.com/[user]/pimpmytmux
+# https://github.com/christopherlouet/pimpmytmux
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/[user]/pimpmytmux/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/christopherlouet/pimpmytmux/main/install.sh | bash
 #   or
-#   git clone https://github.com/[user]/pimpmytmux.git && cd pimpmytmux && ./install.sh
+#   git clone https://github.com/christopherlouet/pimpmytmux.git && cd pimpmytmux && ./install.sh
 
 set -euo pipefail
 
@@ -53,7 +53,7 @@ success() {
 # -----------------------------------------------------------------------------
 
 PIMPMYTMUX_VERSION="0.1.0"
-PIMPMYTMUX_REPO="https://github.com/[user]/pimpmytmux.git"
+PIMPMYTMUX_REPO="https://github.com/christopherlouet/pimpmytmux.git"
 PIMPMYTMUX_INSTALL_DIR="${PIMPMYTMUX_INSTALL_DIR:-$HOME/.pimpmytmux}"
 PIMPMYTMUX_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/pimpmytmux"
 PIMPMYTMUX_DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/pimpmytmux"
@@ -547,7 +547,7 @@ EOF
     echo "  4. Apply changes: ${CYAN}pimpmytmux apply${RESET}"
     echo ""
     echo "Configuration: ${PIMPMYTMUX_CONFIG_DIR}/pimpmytmux.yaml"
-    echo "Documentation: https://github.com/[user]/pimpmytmux"
+    echo "Documentation: https://github.com/christopherlouet/pimpmytmux"
     echo ""
 }
 

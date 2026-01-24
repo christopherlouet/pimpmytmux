@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # pimpmytmux - Configuration parsing and tmux.conf generation
-# https://github.com/[user]/pimpmytmux
+# https://github.com/christopherlouet/pimpmytmux
 
 # shellcheck source=lib/core.sh
 source "${PIMPMYTMUX_LIB_DIR:-$(dirname "${BASH_SOURCE[0]}")}/core.sh"

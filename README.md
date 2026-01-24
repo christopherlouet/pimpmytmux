@@ -31,7 +31,7 @@ A modern, modular tmux configuration framework. Easy to configure, productivity-
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pimpmytmux.git ~/.config/pimpmytmux
+git clone https://github.com/christopherlouet/pimpmytmux.git ~/.config/pimpmytmux
 cd ~/.config/pimpmytmux
 
 # Run the installer

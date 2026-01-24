@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # pimpmytmux - Theme management
-# https://github.com/[user]/pimpmytmux
+# https://github.com/christopherlouet/pimpmytmux
 
 # Guard against re-sourcing
 [[ -n "${_PIMPMYTMUX_THEMES_LOADED:-}" ]] && return 0

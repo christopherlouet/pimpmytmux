@@ -28,9 +28,12 @@ npm-debug.log*
 # Test coverage
 coverage/
 
-# Claude Code local config
+# Claude Code config (private)
+.claude/
+CLAUDE.md
 CLAUDE.local.md
-.claude/settings.local.json
+CLAUDE.local.md.example
+specs/
 
 # Backup archives
 *.tgz
