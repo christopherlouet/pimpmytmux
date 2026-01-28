@@ -142,6 +142,24 @@ config_enabled() {
     [[ "$value" == "true" || "$value" == "yes" || "$value" == "1" ]]
 }
 
+## Get the clipboard copy command for the current platform
+## Usage: get_copy_command
+## Returns: The copy command (e.g., "wl-copy", "pbcopy", "xclip -selection clipboard")
+##          or empty string if not configured
+get_copy_command() {
+    local platform
+    platform=$(get_platform)
+
+    case "$platform" in
+        linux|macos|wsl)
+            get_config ".platform.${platform}.copy_command" ""
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
+}
+
 # -----------------------------------------------------------------------------
 # Config Validation
 # -----------------------------------------------------------------------------
@@ -346,6 +364,9 @@ EOF
 
     # Vim-style navigation
     if [[ "$vim_mode" == "true" ]]; then
+        local copy_cmd
+        copy_cmd=$(get_copy_command)
+
         cat << 'EOF'
 # Vim-style pane navigation
 bind h select-pane -L
@@ -362,7 +383,16 @@ bind -r L resize-pane -R 5
 # Copy mode vi keys
 setw -g mode-keys vi
 bind -T copy-mode-vi v send-keys -X begin-selection
-bind -T copy-mode-vi y send-keys -X copy-selection-and-cancel
+EOF
+
+        # Use copy-pipe-and-cancel if copy_command is configured
+        if [[ -n "$copy_cmd" ]]; then
+            echo "bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel \"${copy_cmd}\""
+        else
+            echo "bind -T copy-mode-vi y send-keys -X copy-selection-and-cancel"
+        fi
+
+        cat << 'EOF'
 bind -T copy-mode-vi Escape send-keys -X cancel
 
 EOF
@@ -440,7 +470,9 @@ generate_tmux_conf() {
         # Generate navigation configuration if enabled
         if config_enabled ".modules.navigation.enabled"; then
             if config_enabled ".modules.navigation.vim_mode"; then
-                generate_vim_mode_config 2>/dev/null || true
+                local nav_copy_cmd
+                nav_copy_cmd=$(get_copy_command)
+                generate_vim_mode_config "$nav_copy_cmd" 2>/dev/null || true
             fi
             if config_enabled ".modules.navigation.fzf_integration"; then
                 generate_fzf_bindings 2>/dev/null || true

@@ -45,7 +45,10 @@ EOF
 }
 
 ## Generate vim-style copy mode bindings
+## If copy_command is provided, uses copy-pipe-and-cancel to send to system clipboard
 generate_vim_copy_mode() {
+    local copy_cmd="${1:-}"
+
     cat << 'EOF'
 # -----------------------------------------------------------------------------
 # Vim-style Copy Mode
@@ -63,8 +66,18 @@ bind -T copy-mode-vi v send-keys -X begin-selection
 # Rectangle selection with C-v
 bind -T copy-mode-vi C-v send-keys -X rectangle-toggle
 
-# Yank with y
-bind -T copy-mode-vi y send-keys -X copy-selection-and-cancel
+EOF
+
+    # Yank with y - use copy-pipe-and-cancel if copy_command is configured
+    if [[ -n "$copy_cmd" ]]; then
+        echo "# Yank with y (to system clipboard)"
+        echo "bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel \"${copy_cmd}\""
+    else
+        echo "# Yank with y"
+        echo "bind -T copy-mode-vi y send-keys -X copy-selection-and-cancel"
+    fi
+
+    cat << 'EOF'
 
 # Yank to end of line with Y
 bind -T copy-mode-vi Y send-keys -X copy-end-of-line
@@ -129,8 +142,11 @@ EOF
 }
 
 ## Generate all vim mode configuration
+## Usage: generate_vim_mode_config [copy_command]
 generate_vim_mode_config() {
+    local copy_cmd="${1:-}"
+
     generate_vim_navigation
-    generate_vim_copy_mode
+    generate_vim_copy_mode "$copy_cmd"
     generate_vim_window_nav
 }

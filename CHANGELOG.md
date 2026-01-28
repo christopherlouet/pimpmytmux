@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-01-28
+
+### Fixed
+- **Clipboard integration**: The `platform.<os>.copy_command` configuration is now properly applied
+  - Added `get_copy_command()` function to read platform-specific clipboard command
+  - Modified `_generate_keybindings()` to use `copy-pipe-and-cancel` when `copy_command` is configured
+  - Updated `generate_vim_copy_mode()` in vim-mode module to support system clipboard
+  - Fixes copy/paste not working on Wayland (wl-copy) and other clipboard tools
+
+### Added
+- **New tests**: Added `tests/clipboard.bats` with 10 tests for clipboard functionality
+
 ## [1.0.1] - 2026-01-24
 
 ### Changed
