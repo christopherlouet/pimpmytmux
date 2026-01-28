@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-01-28
+
+### Added
+- **Yank bindings** (`vim-mode.sh`): tmux-yank style clipboard integration
+  - `prefix + y`: Copy current line to system clipboard
+  - `prefix + Y`: Copy current working directory to system clipboard
+  - `stay_in_copy_mode` option: Stay in copy mode after yanking (uses `copy-pipe` instead of `copy-pipe-and-cancel`)
+  - Configurable via `modules.navigation.yank` in YAML config
+- **Thumbs module** (`modules/navigation/thumbs.sh`): tmux-thumbs integration for quick copy by hints
+  - `prefix + T`: Activate thumbs pick mode
+  - Configurable alphabet, position, reverse, and unique options
+  - Disabled by default (requires external tmux-thumbs installation)
+  - Configurable via `modules.navigation.thumbs` in YAML config
+- **Open module** (`modules/navigation/open.sh`): tmux-open style file/URL opening from copy mode
+  - `o` (copy-mode-vi): Open selection with system opener (`xdg-open`/`open`)
+  - `C-o` (copy-mode-vi): Open selection with editor in a split pane
+  - `S` (copy-mode-vi): Search selection in browser
+  - Auto-detects platform open command and editor
+  - Configurable search engine, editor, and open command
+  - Configurable via `modules.navigation.open` in YAML config
+- **New tests**: 42 tests across 3 new test files
+  - `tests/yank.bats`: 16 tests for yank bindings
+  - `tests/thumbs.bats`: 11 tests for thumbs module
+  - `tests/open.bats`: 15 tests for open module
+
 ## [1.0.3] - 2026-01-28
 
 ### Changed

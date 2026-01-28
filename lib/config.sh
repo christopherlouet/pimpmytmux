@@ -17,6 +17,8 @@ source "${PIMPMYTMUX_LIB_DIR:-$(dirname "${BASH_SOURCE[0]}")}/status.sh"
 source "${PIMPMYTMUX_ROOT}/modules/navigation/vim-mode.sh" 2>/dev/null || true
 source "${PIMPMYTMUX_ROOT}/modules/navigation/fzf-integration.sh" 2>/dev/null || true
 source "${PIMPMYTMUX_ROOT}/modules/navigation/smart-splits.sh" 2>/dev/null || true
+source "${PIMPMYTMUX_ROOT}/modules/navigation/thumbs.sh" 2>/dev/null || true
+source "${PIMPMYTMUX_ROOT}/modules/navigation/open.sh" 2>/dev/null || true
 
 # -----------------------------------------------------------------------------
 # Constants
@@ -472,13 +474,26 @@ generate_tmux_conf() {
             if config_enabled ".modules.navigation.vim_mode"; then
                 local nav_copy_cmd
                 nav_copy_cmd=$(get_copy_command)
-                generate_vim_mode_config "$nav_copy_cmd" 2>/dev/null || true
+                local stay_in_copy="false"
+                local yank_enabled="true"
+                if config_enabled ".modules.navigation.yank.enabled"; then
+                    stay_in_copy=$(get_config ".modules.navigation.yank.stay_in_copy_mode" "false")
+                else
+                    yank_enabled="false"
+                fi
+                generate_vim_mode_config "$nav_copy_cmd" "$stay_in_copy" "$yank_enabled" 2>/dev/null || true
             fi
             if config_enabled ".modules.navigation.fzf_integration"; then
                 generate_fzf_bindings 2>/dev/null || true
             fi
             if config_enabled ".modules.navigation.smart_splits"; then
                 generate_smart_splits_config 2>/dev/null || true
+            fi
+            if config_enabled ".modules.navigation.thumbs.enabled"; then
+                generate_thumbs_config 2>/dev/null || true
+            fi
+            if config_enabled ".modules.navigation.open.enabled"; then
+                generate_open_config 2>/dev/null || true
             fi
         fi
 

@@ -44,10 +44,35 @@ bind -r M-l resize-pane -R 1
 EOF
 }
 
+## Generate yank bindings (prefix mode)
+## Copies current line or pwd to system clipboard
+## Usage: generate_yank_bindings <copy_command>
+generate_yank_bindings() {
+    local copy_cmd="${1:-}"
+
+    # No copy command, no yank bindings
+    [[ -z "$copy_cmd" ]] && return 0
+
+    cat << EOF
+# -----------------------------------------------------------------------------
+# Yank Bindings (tmux-yank style)
+# -----------------------------------------------------------------------------
+
+# Copy current line to clipboard with prefix + y
+bind y run-shell "tmux capture-pane -p | tmux display -p '#{pane_current_command}' | ${copy_cmd}"
+
+# Copy current working directory to clipboard with prefix + Y
+bind Y run-shell "tmux display -p '#{pane_current_path}' | ${copy_cmd}"
+
+EOF
+}
+
 ## Generate vim-style copy mode bindings
 ## If copy_command is provided, uses copy-pipe-and-cancel to send to system clipboard
+## stay_in_copy: "true" to use copy-pipe (stay in copy mode), "false" for copy-pipe-and-cancel
 generate_vim_copy_mode() {
     local copy_cmd="${1:-}"
+    local stay_in_copy="${2:-false}"
 
     cat << 'EOF'
 # -----------------------------------------------------------------------------
@@ -68,10 +93,15 @@ bind -T copy-mode-vi C-v send-keys -X rectangle-toggle
 
 EOF
 
-    # Yank with y - use copy-pipe-and-cancel if copy_command is configured
+    # Yank with y - use copy-pipe if copy_command is configured
     if [[ -n "$copy_cmd" ]]; then
-        echo "# Yank with y (to system clipboard)"
-        echo "bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel \"${copy_cmd}\""
+        if [[ "$stay_in_copy" == "true" ]]; then
+            echo "# Yank with y (to system clipboard, stay in copy mode)"
+            echo "bind -T copy-mode-vi y send-keys -X copy-pipe \"${copy_cmd}\""
+        else
+            echo "# Yank with y (to system clipboard)"
+            echo "bind -T copy-mode-vi y send-keys -X copy-pipe-and-cancel \"${copy_cmd}\""
+        fi
     else
         echo "# Yank with y"
         echo "bind -T copy-mode-vi y send-keys -X copy-selection-and-cancel"
@@ -142,11 +172,16 @@ EOF
 }
 
 ## Generate all vim mode configuration
-## Usage: generate_vim_mode_config [copy_command]
+## Usage: generate_vim_mode_config [copy_command] [stay_in_copy] [yank_enabled]
 generate_vim_mode_config() {
     local copy_cmd="${1:-}"
+    local stay_in_copy="${2:-false}"
+    local yank_enabled="${3:-true}"
 
     generate_vim_navigation
-    generate_vim_copy_mode "$copy_cmd"
+    generate_vim_copy_mode "$copy_cmd" "$stay_in_copy"
     generate_vim_window_nav
+    if [[ "$yank_enabled" == "true" ]]; then
+        generate_yank_bindings "$copy_cmd"
+    fi
 }
