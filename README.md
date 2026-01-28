@@ -153,7 +153,7 @@ modules:
     enabled: true
     vim_mode: true     # hjkl navigation
     fzf_integration: true
-    smart_splits: true
+    smart_splits: false  # Set true for vim-tmux-navigator
 
   devtools:
     enabled: true

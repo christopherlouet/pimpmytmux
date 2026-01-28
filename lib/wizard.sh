@@ -445,7 +445,7 @@ modules:
     enabled: ${WIZARD_MODULES_NAVIGATION:-false}
     vim_mode: ${WIZARD_NAV_VIM:-true}
     fzf_integration: ${WIZARD_NAV_FZF:-false}
-    smart_splits: ${WIZARD_NAV_SPLITS:-true}
+    smart_splits: ${WIZARD_NAV_SPLITS:-false}
 
   devtools:
     enabled: ${WIZARD_MODULES_DEVTOOLS:-false}

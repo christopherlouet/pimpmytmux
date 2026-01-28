@@ -12,7 +12,7 @@ set -euo pipefail
 # Constants
 # -----------------------------------------------------------------------------
 
-PIMPMYTMUX_VERSION="${PIMPMYTMUX_VERSION:-1.0.2}"
+PIMPMYTMUX_VERSION="${PIMPMYTMUX_VERSION:-1.0.3}"
 PIMPMYTMUX_CONFIG_DIR="${PIMPMYTMUX_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/pimpmytmux}"
 PIMPMYTMUX_DATA_DIR="${PIMPMYTMUX_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/pimpmytmux}"
 PIMPMYTMUX_CACHE_DIR="${PIMPMYTMUX_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/pimpmytmux}"

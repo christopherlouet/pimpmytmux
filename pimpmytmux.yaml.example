@@ -86,7 +86,8 @@ modules:
     # fzf integration for session/window/pane switching
     fzf_integration: true
     # Smart pane switching (integrates with vim-tmux-navigator)
-    smart_splits: true
+    # Note: When enabled, Ctrl-l is captured for pane navigation (breaks shell clear)
+    smart_splits: false
 
   # Developer tools
   devtools:

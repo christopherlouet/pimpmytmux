@@ -104,7 +104,7 @@ modules:
     enabled: true
     vim_mode: true        # hjkl pane navigation
     fzf_integration: true # fzf session/window switcher
-    smart_splits: true    # Intelligent split sizing
+    smart_splits: false   # vim-tmux integration (captures Ctrl-l)
 
   # Development tools
   devtools:
@@ -585,7 +585,7 @@ modules:
     enabled: true
     vim_mode: true        # hjkl navigation
     fzf_integration: true # Fuzzy finder
-    smart_splits: true    # Intelligent sizing
+    smart_splits: false   # vim-tmux integration (captures Ctrl-l)
 ```
 
 ### devtools

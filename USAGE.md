@@ -277,7 +277,7 @@ modules:
     enabled: true
     vim_mode: true       # Use hjkl for pane navigation
     fzf_integration: true # Use fzf for switching
-    smart_splits: true   # Smart pane splits
+    smart_splits: false  # Smart pane splits (captures Ctrl-l when true)
 
   # Developer tools
   devtools:
@@ -930,7 +930,7 @@ modules:
     enabled: true
     vim_mode: true
     fzf_integration: true
-    smart_splits: true
+    smart_splits: false
 
 keybindings:
   preset: vim-heavy
