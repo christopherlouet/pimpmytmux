@@ -1,0 +1,36 @@
+# Claude Code Layout Template
+# Main agent (60%) + Tests (20%) + Git (20%)
+
+name: Claude Code
+description: Claude Code session with tests and git panes
+
+layout:
+  # Main horizontal split
+  orientation: horizontal
+  panes:
+    # Left pane: Claude Code interactive (60%)
+    - size: 60%
+      name: claude
+      command: ""
+      focus: true
+
+    # Right side: vertical split
+    - size: 40%
+      orientation: vertical
+      panes:
+        # Top right: Tests (50% of right side)
+        - size: 50%
+          name: tests
+          command: ""
+
+        # Bottom right: Git status (50% of right side)
+        - size: 50%
+          name: git
+          command: "git status 2>/dev/null; echo 'Ready'"
+
+# Project type hints (auto-apply for these project types)
+auto_apply:
+  - claude-code
+
+# Keybinding to quickly apply this layout
+keybinding: "M-5"

@@ -26,6 +26,53 @@ PIMPMYTMUX_TEMPLATES_DIR="${PIMPMYTMUX_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}"
 LAYOUT_ZEN_MODE="false"
 
 # -----------------------------------------------------------------------------
+# Claude Code autostart helpers
+# -----------------------------------------------------------------------------
+
+## Check if Claude Code should be auto-launched in panes
+## Checks YAML config modules.claude.autostart (default: false)
+## Env var PIMPMYTMUX_CLAUDE_AUTOSTART overrides YAML config
+_claude_should_autostart() {
+    local autostart
+
+    # Env var takes priority over YAML config
+    if [[ -n "${PIMPMYTMUX_CLAUDE_AUTOSTART:-}" ]]; then
+        autostart="$PIMPMYTMUX_CLAUDE_AUTOSTART"
+    else
+        autostart=$(get_config ".modules.claude.autostart" "false")
+    fi
+
+    if [[ "$autostart" != "true" ]]; then
+        return 1
+    fi
+
+    # Check that claude CLI is available
+    if ! command -v claude >/dev/null 2>&1; then
+        log_warn "Claude Code not found in PATH, skipping autostart"
+        return 1
+    fi
+
+    return 0
+}
+
+## Launch Claude Code in a specific tmux pane
+## $1: pane target (pane_id or index)
+## $2: "true" to enable Agent Teams mode (optional, default: "false")
+_claude_launch_in_pane() {
+    local pane_target="$1"
+    local agent_teams="${2:-false}"
+    local claude_cmd
+    claude_cmd=$(get_config ".modules.claude.command" "claude")
+
+    if [[ "$agent_teams" == "true" ]]; then
+        tmux send-keys -t "$pane_target" \
+            "export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1; ${claude_cmd} --teammate-mode tmux" Enter
+    else
+        tmux send-keys -t "$pane_target" "${claude_cmd}" Enter
+    fi
+}
+
+# -----------------------------------------------------------------------------
 # Layout settings functions
 # -----------------------------------------------------------------------------
 
@@ -300,6 +347,87 @@ apply_layout_writing() {
     log_success "Applied writing (zen) layout"
 }
 
+## Apply claude-code layout: Claude Code (60%) | tests + git
+apply_layout_claude_code() {
+    local cwd="${1:-$(pwd)}"
+
+    # Horizontal split: 60% left (claude) / 40% right
+    tmux split-window -h -p 40 -c "$cwd"
+    # Vertical split right side: 50/50 (tests / git)
+    tmux split-window -v -p 50 -c "$cwd"
+
+    # Send git status to the bottom-right pane
+    tmux send-keys -t 2 "git status 2>/dev/null; echo 'Ready'" Enter
+
+    # Focus on pane 0 (claude)
+    tmux select-pane -t 0
+
+    # Autostart Claude Code in main pane (standard mode)
+    if _claude_should_autostart; then
+        _claude_launch_in_pane 0
+    fi
+
+    log_success "Applied claude-code layout"
+}
+
+## Apply claude-agent-teams layout: 2x2 grid for multi-agent collaboration
+apply_layout_claude_agent_teams() {
+    local cwd="${1:-$(pwd)}"
+
+    # Save base pane (team lead)
+    local base_pane
+    base_pane=$(tmux display-message -p '#{pane_id}')
+
+    # Split horizontal: left/right
+    tmux split-window -h -c "$cwd"
+    # Split right side vertically
+    tmux split-window -v -c "$cwd"
+    # Go back to base pane and split left side vertically
+    tmux select-pane -t "$base_pane"
+    tmux split-window -v -c "$cwd"
+
+    # Focus on lead pane (base)
+    tmux select-pane -t "$base_pane"
+
+    # Autostart Claude Code in lead pane (Agent Teams mode)
+    if _claude_should_autostart; then
+        _claude_launch_in_pane "$base_pane" "true"
+    fi
+
+    log_success "Applied claude-agent-teams layout"
+}
+
+## Apply claude-worktrees layout: 2 columns with 65/35 splits
+apply_layout_claude_worktrees() {
+    local cwd="${1:-$(pwd)}"
+
+    # Save base pane (worktree-1)
+    local base_pane
+    base_pane=$(tmux display-message -p '#{pane_id}')
+
+    # Split horizontal: 2 columns
+    tmux split-window -h -c "$cwd"
+    # Save right pane (worktree-2) before further splits
+    local right_pane
+    right_pane=$(tmux display-message -p '#{pane_id}')
+    # Split right column: 65/35 (worktree-2 / tests-2)
+    tmux split-window -v -p 35 -c "$cwd"
+    # Go back to base pane and split left column: 65/35
+    tmux select-pane -t "$base_pane"
+    tmux split-window -v -p 35 -c "$cwd"
+
+    # Focus on worktree-1 (base pane)
+    tmux select-pane -t "$base_pane"
+
+    # Autostart Claude Code in both worktree panes (standard mode)
+    if _claude_should_autostart; then
+        _claude_launch_in_pane "$base_pane"
+        _claude_launch_in_pane "$right_pane"
+    fi
+
+    log_success "Applied claude-worktrees layout"
+}
+
 ## Apply a layout from template file
 apply_layout_from_file() {
     local layout_file="$1"
@@ -341,6 +469,15 @@ apply_layout_from_file() {
             # Writing layout handles its own settings via _parse_layout_settings
             apply_layout_writing "$cwd"
             return $?
+            ;;
+        *claude*code*)
+            apply_layout_claude_code "$cwd"
+            ;;
+        *claude*agent*team*)
+            apply_layout_claude_agent_teams "$cwd"
+            ;;
+        *claude*worktree*)
+            apply_layout_claude_worktrees "$cwd"
             ;;
         *)
             log_warn "Unknown layout type: $layout_name, applying tiled"
@@ -385,6 +522,18 @@ apply_layout() {
             apply_layout_writing "$cwd"
             return $?
             ;;
+        claude-code)
+            apply_layout_claude_code "$cwd"
+            _apply_layout_settings
+            ;;
+        claude-agent-teams)
+            apply_layout_claude_agent_teams "$cwd"
+            _apply_layout_settings
+            ;;
+        claude-worktrees)
+            apply_layout_claude_worktrees "$cwd"
+            _apply_layout_settings
+            ;;
         *)
             # Try to find template file
             local layout_file
@@ -406,6 +555,9 @@ choose_layout() {
         "dev-fullstack:Editor + Terminal + Server (60/40 split)"
         "dev-api:Code + Logs (70/30 split)"
         "monitoring:4 panes for system monitoring"
+        "claude-code:Claude Code + Tests + Git (60/40 split)"
+        "claude-agent-teams:4 equal panes for Agent Teams"
+        "claude-worktrees:2 worktrees with tests (50/50)"
         "writing:Single pane zen mode"
         "tiled:Tmux tiled layout"
         "main-horizontal:Main pane on top"

@@ -105,6 +105,24 @@ EOF
     echo "$script_path"
 }
 
+## Generate a script that outputs Claude Code status
+_generate_claude_status_script() {
+    local script_path="${PIMPMYTMUX_CACHE_DIR}/scripts/claude-status.sh"
+    local module_path="${PIMPMYTMUX_MODULES_DIR}/monitoring/claude-status.sh"
+
+    mkdir -p "$(dirname "$script_path")"
+
+    cat > "$script_path" << EOF
+#!/usr/bin/env bash
+export PIMPMYTMUX_LIB_DIR="${PIMPMYTMUX_LIB_DIR}"
+source "$module_path"
+get_claude_status_formatted
+EOF
+
+    chmod +x "$script_path"
+    echo "$script_path"
+}
+
 ## Generate a script that outputs git status
 _generate_git_script() {
     local script_path="${PIMPMYTMUX_CACHE_DIR}/scripts/git.sh"
@@ -130,7 +148,7 @@ EOF
 
 ## Generate monitoring configuration for tmux.conf
 generate_monitoring_config() {
-    local cpu_script memory_script battery_script network_script weather_script git_script
+    local cpu_script memory_script battery_script network_script weather_script git_script claude_script
 
     cat << 'EOF'
 # -----------------------------------------------------------------------------
@@ -146,6 +164,7 @@ EOF
     network_script=$(_generate_network_script)
     weather_script=$(_generate_weather_script)
     git_script=$(_generate_git_script)
+    claude_script=$(_generate_claude_status_script)
 
     cat << EOF
 # CPU usage
@@ -165,6 +184,9 @@ set -g @weather_script "$weather_script"
 
 # Git status
 set -g @git_script "$git_script"
+
+# Claude Code status
+set -g @claude_script "$claude_script"
 
 EOF
 }
@@ -222,6 +244,10 @@ EOF
 
         # Build right status based on components
         local monitoring_part=""
+
+        if [[ "$components" == *"claude"* ]]; then
+            monitoring_part+='#(#{@claude_script}) '
+        fi
 
         if [[ "$components" == *"cpu"* ]]; then
             monitoring_part+='#(#{@cpu_script}) '
