@@ -26,6 +26,51 @@ PIMPMYTMUX_TEMPLATES_DIR="${PIMPMYTMUX_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}"
 LAYOUT_ZEN_MODE="false"
 
 # -----------------------------------------------------------------------------
+# Claude Code autostart helpers
+# -----------------------------------------------------------------------------
+
+## Check if Claude Code should be auto-launched in panes
+## Checks YAML config modules.claude.autostart (default: false)
+## Env var PIMPMYTMUX_CLAUDE_AUTOSTART overrides YAML config
+_claude_should_autostart() {
+    local autostart
+
+    # Env var takes priority over YAML config
+    if [[ -n "${PIMPMYTMUX_CLAUDE_AUTOSTART:-}" ]]; then
+        autostart="$PIMPMYTMUX_CLAUDE_AUTOSTART"
+    else
+        autostart=$(get_config ".modules.claude.autostart" "false")
+    fi
+
+    if [[ "$autostart" != "true" ]]; then
+        return 1
+    fi
+
+    # Check that claude CLI is available
+    if ! command -v claude >/dev/null 2>&1; then
+        log_warn "Claude Code not found in PATH, skipping autostart"
+        return 1
+    fi
+
+    return 0
+}
+
+## Launch Claude Code in a specific tmux pane
+## $1: pane target (pane_id or index)
+## $2: "true" to enable Agent Teams mode (optional, default: "false")
+_claude_launch_in_pane() {
+    local pane_target="$1"
+    local agent_teams="${2:-false}"
+
+    if [[ "$agent_teams" == "true" ]]; then
+        tmux send-keys -t "$pane_target" \
+            "export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1; claude --teammate-mode tmux" Enter
+    else
+        tmux send-keys -t "$pane_target" "claude" Enter
+    fi
+}
+
+# -----------------------------------------------------------------------------
 # Layout settings functions
 # -----------------------------------------------------------------------------
 
@@ -315,6 +360,11 @@ apply_layout_claude_code() {
     # Focus on pane 0 (claude)
     tmux select-pane -t 0
 
+    # Autostart Claude Code in main pane (standard mode)
+    if _claude_should_autostart; then
+        _claude_launch_in_pane 0
+    fi
+
     log_success "Applied claude-code layout"
 }
 
@@ -337,6 +387,11 @@ apply_layout_claude_agent_teams() {
     # Focus on lead pane (base)
     tmux select-pane -t "$base_pane"
 
+    # Autostart Claude Code in lead pane (Agent Teams mode)
+    if _claude_should_autostart; then
+        _claude_launch_in_pane "$base_pane" "true"
+    fi
+
     log_success "Applied claude-agent-teams layout"
 }
 
@@ -350,6 +405,9 @@ apply_layout_claude_worktrees() {
 
     # Split horizontal: 2 columns
     tmux split-window -h -c "$cwd"
+    # Save right pane (worktree-2) before further splits
+    local right_pane
+    right_pane=$(tmux display-message -p '#{pane_id}')
     # Split right column: 65/35 (worktree-2 / tests-2)
     tmux split-window -v -p 35 -c "$cwd"
     # Go back to base pane and split left column: 65/35
@@ -358,6 +416,12 @@ apply_layout_claude_worktrees() {
 
     # Focus on worktree-1 (base pane)
     tmux select-pane -t "$base_pane"
+
+    # Autostart Claude Code in both worktree panes (standard mode)
+    if _claude_should_autostart; then
+        _claude_launch_in_pane "$base_pane"
+        _claude_launch_in_pane "$right_pane"
+    fi
 
     log_success "Applied claude-worktrees layout"
 }

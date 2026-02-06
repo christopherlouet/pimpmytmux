@@ -34,30 +34,42 @@ _claude_detect_ps() {
     return 1
 }
 
-## Get Claude Code status for current pane
-## Returns "CC" if active, empty string if inactive
+## Count Claude Code agents across all panes in the current window
+_claude_count_window_agents() {
+    local count=0
+    local pane_pids
+
+    pane_pids=$(tmux list-panes -F '#{pane_pid}' 2>/dev/null) || return 0
+
+    while IFS= read -r pid; do
+        [[ -z "$pid" ]] && continue
+        if check_command pgrep 2>/dev/null; then
+            if _claude_detect_pgrep "$pid"; then
+                count=$((count + 1))
+            fi
+        else
+            if _claude_detect_ps "$pid"; then
+                count=$((count + 1))
+            fi
+        fi
+    done <<< "$pane_pids"
+
+    echo "$count"
+}
+
+## Get Claude Code status for the current window
+## Returns "CC" if 1 agent, "CC:N" if N > 1, empty if none
 get_claude_status() {
-    local pane_pid
-    pane_pid=$(tmux display-message -p '#{pane_pid}' 2>/dev/null)
+    local count
+    count=$(_claude_count_window_agents)
 
-    if [[ -z "$pane_pid" ]]; then
+    if [[ "$count" -eq 0 ]]; then
         return 0
-    fi
-
-    # Try pgrep first, fall back to ps
-    if check_command pgrep 2>/dev/null; then
-        if _claude_detect_pgrep "$pane_pid"; then
-            echo "$CLAUDE_STATUS_ICON"
-            return 0
-        fi
+    elif [[ "$count" -eq 1 ]]; then
+        echo "$CLAUDE_STATUS_ICON"
     else
-        if _claude_detect_ps "$pane_pid"; then
-            echo "$CLAUDE_STATUS_ICON"
-            return 0
-        fi
+        echo "${CLAUDE_STATUS_ICON}:${count}"
     fi
-
-    return 0
 }
 
 # -----------------------------------------------------------------------------

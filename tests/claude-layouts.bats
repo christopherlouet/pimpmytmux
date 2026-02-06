@@ -42,12 +42,12 @@ setup() {
     [[ -z "$output" ]]
 }
 
-@test "get_claude_status returns CC when claude process found" {
+@test "get_claude_status returns CC when 1 claude process found" {
     source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
 
-    # Mock tmux to return a pane_pid
+    # Mock tmux list-panes to return 1 pane PID
     function tmux() {
-        if [[ "$1" == "display-message" ]]; then
+        if [[ "$1" == "list-panes" ]]; then
             echo "12345"
         fi
     }
@@ -55,7 +55,6 @@ setup() {
 
     # Mock pgrep to find claude process
     function pgrep() {
-        echo "12346"
         return 0
     }
     export -f pgrep
@@ -68,9 +67,9 @@ setup() {
 @test "get_claude_status uses ps fallback when pgrep unavailable" {
     source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
 
-    # Mock tmux
+    # Mock tmux list-panes
     function tmux() {
-        if [[ "$1" == "display-message" ]]; then
+        if [[ "$1" == "list-panes" ]]; then
             echo "12345"
         fi
     }
@@ -158,9 +157,9 @@ setup() {
 @test "get_claude_status_formatted returns formatted output when active" {
     source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
 
-    # Mock tmux
+    # Mock tmux list-panes
     function tmux() {
-        if [[ "$1" == "display-message" ]]; then
+        if [[ "$1" == "list-panes" ]]; then
             echo "12345"
         fi
     }
@@ -168,7 +167,6 @@ setup() {
 
     # Mock pgrep to find claude
     function pgrep() {
-        echo "12346"
         return 0
     }
     export -f pgrep
@@ -463,6 +461,362 @@ setup() {
     [[ "$content" == *"claude-status.sh"* ]]
     [[ "$content" == *"get_claude_status_formatted"* ]]
 }
+
+# =============================================================================
+# Autostart helpers
+# =============================================================================
+
+@test "_claude_should_autostart returns false by default (opt-in)" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    # No config file, no env var → default false
+    run _claude_should_autostart
+    assert_failure
+}
+
+@test "_claude_should_autostart returns true when YAML config enabled" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    create_test_config '
+modules:
+  claude:
+    autostart: true
+'
+    # Mock claude as available
+    function claude() { :; }
+    export -f claude
+
+    run _claude_should_autostart
+    assert_success
+}
+
+@test "_claude_should_autostart returns false when YAML config disabled" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    create_test_config '
+modules:
+  claude:
+    autostart: false
+'
+
+    run _claude_should_autostart
+    assert_failure
+}
+
+@test "_claude_should_autostart env var overrides YAML config" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    create_test_config '
+modules:
+  claude:
+    autostart: false
+'
+    # Env var override
+    export PIMPMYTMUX_CLAUDE_AUTOSTART=true
+
+    # Mock claude as available
+    function claude() { :; }
+    export -f claude
+
+    run _claude_should_autostart
+    assert_success
+
+    unset PIMPMYTMUX_CLAUDE_AUTOSTART
+}
+
+@test "_claude_should_autostart returns false when claude not in PATH" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    create_test_config '
+modules:
+  claude:
+    autostart: true
+'
+
+    # Ensure claude is NOT available (override any function)
+    unset -f claude 2>/dev/null || true
+
+    # Save and override PATH to exclude claude
+    local orig_path="$PATH"
+    export PATH="/usr/bin:/bin"
+
+    run _claude_should_autostart
+
+    export PATH="$orig_path"
+    assert_failure
+}
+
+@test "_claude_launch_in_pane sends claude command via send-keys" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    local tmux_calls=()
+    function tmux() {
+        tmux_calls+=("$*")
+    }
+    export -f tmux
+
+    _claude_launch_in_pane "%0"
+
+    local found_sendkeys=false
+    for cmd in "${tmux_calls[@]}"; do
+        [[ "$cmd" == *"send-keys"*"%0"*"claude"* ]] && found_sendkeys=true
+    done
+
+    [[ "$found_sendkeys" == "true" ]]
+}
+
+@test "_claude_launch_in_pane with agent_teams sends env var and flag" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    local tmux_calls=()
+    function tmux() {
+        tmux_calls+=("$*")
+    }
+    export -f tmux
+
+    _claude_launch_in_pane "%0" "true"
+
+    local found_env=false
+    local found_flag=false
+    for cmd in "${tmux_calls[@]}"; do
+        [[ "$cmd" == *"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"* ]] && found_env=true
+        [[ "$cmd" == *"--teammate-mode tmux"* ]] && found_flag=true
+    done
+
+    [[ "$found_env" == "true" ]]
+    [[ "$found_flag" == "true" ]]
+}
+
+# =============================================================================
+# Autostart integration in layouts
+# =============================================================================
+
+@test "apply_layout_claude_agent_teams launches claude with Agent Teams when autostart enabled" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    create_test_config '
+modules:
+  claude:
+    autostart: true
+'
+    # Mock claude as available
+    function claude() { :; }
+    export -f claude
+
+    local tmux_calls=()
+    function tmux() {
+        tmux_calls+=("$*")
+        if [[ "$1" == "display-message" ]]; then
+            echo "%0"
+        fi
+    }
+    export -f tmux
+
+    apply_layout_claude_agent_teams "/tmp"
+
+    local found_agent_teams=false
+    for cmd in "${tmux_calls[@]}"; do
+        [[ "$cmd" == *"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"* ]] && found_agent_teams=true
+    done
+
+    [[ "$found_agent_teams" == "true" ]]
+}
+
+@test "apply_layout_claude_code launches claude standard when autostart enabled" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    create_test_config '
+modules:
+  claude:
+    autostart: true
+'
+    function claude() { :; }
+    export -f claude
+
+    local tmux_calls=()
+    function tmux() {
+        tmux_calls+=("$*")
+    }
+    export -f tmux
+
+    apply_layout_claude_code "/tmp"
+
+    # Should have send-keys with "claude" but NOT Agent Teams env var
+    local found_claude_sendkeys=false
+    local found_agent_teams=false
+    for cmd in "${tmux_calls[@]}"; do
+        [[ "$cmd" == *"send-keys"*"claude"* ]] && [[ "$cmd" != *"git"* ]] && found_claude_sendkeys=true
+        [[ "$cmd" == *"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"* ]] && found_agent_teams=true
+    done
+
+    [[ "$found_claude_sendkeys" == "true" ]]
+    [[ "$found_agent_teams" == "false" ]]
+}
+
+@test "apply_layout_claude_worktrees launches claude in both worktree panes when autostart enabled" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    create_test_config '
+modules:
+  claude:
+    autostart: true
+'
+    function claude() { :; }
+    export -f claude
+
+    local tmux_calls=()
+    function tmux() {
+        tmux_calls+=("$*")
+        if [[ "$1" == "display-message" ]]; then
+            echo "%0"
+        fi
+    }
+    export -f tmux
+
+    apply_layout_claude_worktrees "/tmp"
+
+    # Count send-keys with "claude" (should be 2 - one per worktree)
+    local claude_launches=0
+    for cmd in "${tmux_calls[@]}"; do
+        [[ "$cmd" == *"send-keys"*"claude"* ]] && claude_launches=$((claude_launches + 1))
+    done
+
+    [[ "$claude_launches" -eq 2 ]]
+}
+
+@test "apply_layout_claude_agent_teams does NOT launch claude when autostart disabled" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    # No autostart config (default false)
+    local tmux_calls=()
+    function tmux() {
+        tmux_calls+=("$*")
+        if [[ "$1" == "display-message" ]]; then
+            echo "%0"
+        fi
+    }
+    export -f tmux
+
+    apply_layout_claude_agent_teams "/tmp"
+
+    # Should NOT have send-keys with "claude"
+    local found_claude=false
+    for cmd in "${tmux_calls[@]}"; do
+        [[ "$cmd" == *"send-keys"*"claude"* ]] && found_claude=true
+    done
+
+    [[ "$found_claude" == "false" ]]
+}
+
+# =============================================================================
+# Multi-agent monitoring (US3)
+# =============================================================================
+
+@test "_claude_count_window_agents returns 0 when no agents" {
+    source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
+
+    # Mock tmux list-panes returning 2 pane PIDs
+    function tmux() {
+        if [[ "$1" == "list-panes" ]]; then
+            printf "11111\n22222\n"
+        fi
+    }
+    export -f tmux
+
+    # Mock pgrep to find nothing
+    function pgrep() { return 1; }
+    export -f pgrep
+
+    run _claude_count_window_agents
+    assert_success
+    assert_output "0"
+}
+
+@test "_claude_count_window_agents returns 3 when 3 agents active" {
+    source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
+
+    # Mock tmux list-panes returning 4 pane PIDs
+    function tmux() {
+        if [[ "$1" == "list-panes" ]]; then
+            printf "11111\n22222\n33333\n44444\n"
+        fi
+    }
+    export -f tmux
+
+    # Mock pgrep: finds claude for first 3 panes, not 4th
+    # _claude_detect_pgrep calls: pgrep -P "$pane_pid" -f "claude"
+    function pgrep() {
+        # $2 is the pane_pid (after -P flag)
+        case "$2" in
+            11111|22222|33333) return 0 ;;
+            *) return 1 ;;
+        esac
+    }
+    export -f pgrep
+
+    run _claude_count_window_agents
+    assert_success
+    assert_output "3"
+}
+
+@test "get_claude_status returns CC for 1 agent" {
+    source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
+
+    # Override _claude_count_window_agents
+    function _claude_count_window_agents() { echo "1"; }
+    export -f _claude_count_window_agents
+
+    run get_claude_status
+    assert_success
+    assert_output "CC"
+}
+
+@test "get_claude_status returns CC:3 for 3 agents" {
+    source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
+
+    function _claude_count_window_agents() { echo "3"; }
+    export -f _claude_count_window_agents
+
+    run get_claude_status
+    assert_success
+    assert_output "CC:3"
+}
+
+@test "get_claude_status returns empty for 0 agents" {
+    source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
+
+    function _claude_count_window_agents() { echo "0"; }
+    export -f _claude_count_window_agents
+
+    run get_claude_status
+    assert_success
+    [[ -z "$output" ]]
+}
+
+@test "format_claude_indicator formats CC:3 with color" {
+    source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
+
+    run format_claude_indicator "CC:3"
+    assert_success
+    assert_output_contains "#[fg=green]"
+    assert_output_contains "CC:3"
+    assert_output_contains "#[default]"
+}
+
+# =============================================================================
+# Status bar integration tests
+# =============================================================================
 
 @test "generate_status_bar_config includes claude widget when configured" {
     load_lib 'config'
