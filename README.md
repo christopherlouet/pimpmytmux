@@ -28,7 +28,8 @@ A modern, modular tmux configuration framework. Easy to configure, productivity-
 - **Vim-style navigation** - hjkl pane navigation, vi copy mode
 - **fzf integration** - Fuzzy search for sessions, windows, and panes
 - **Dev layouts** - Pre-configured layouts for development workflows
-- **Status bar widgets** - CPU, memory, battery, git status, and more
+- **Claude Code layouts** - Dedicated layouts for Claude Code, Agent Teams, and git worktrees
+- **Status bar widgets** - CPU, memory, battery, git status, Claude Code agents, and more
 - **Cross-platform** - Works on Linux, macOS, and WSL
 
 ## Quick Start
@@ -165,6 +166,11 @@ modules:
     cpu: true
     memory: true
     battery: true
+    components: "claude,cpu,memory"  # Status bar widgets
+
+  claude:
+    autostart: false   # Auto-launch Claude in claude-* layouts
+    command: "claude"   # Custom command (e.g. "claude --model sonnet")
 ```
 
 See `pimpmytmux.yaml.example` for all available options, or check the [Usage Guide](USAGE.md) for detailed configuration examples and workflows.
@@ -210,10 +216,56 @@ Code (70%) + Logs (30%). Ideal for API development.
 Single maximized pane with zen mode enabled (hides status bar and borders).
 **Note:** This layout will close other panes after confirmation.
 
+### claude-code
+Claude Code (60%) + Tests + Git. Daily driver for AI-assisted development. Keybinding: `M-5`.
+
+```
+┌────────────────────┬───────────────────┐
+│                    │      Tests        │
+│    Claude Code     ├───────────────────┤
+│                    │       Git         │
+└────────────────────┴───────────────────┘
+```
+
+### claude-agent-teams
+4 equal panes for Claude Code Agent Teams multi-agent collaboration. Keybinding: `M-6`.
+
+```
+┌───────────────────┬───────────────────┐
+│    Lead Agent     │   Teammate 1      │
+├───────────────────┼───────────────────┤
+│    Teammate 2     │   Teammate 3      │
+└───────────────────┴───────────────────┘
+```
+
+### claude-worktrees
+2 side-by-side worktrees with tests panes. For parallel development on 2 branches. Keybinding: `M-7`.
+
+```
+┌───────────────────┬───────────────────┐
+│   Worktree 1      │   Worktree 2      │
+│   (claude)        │   (claude)        │
+├───────────────────┼───────────────────┤
+│   Tests 1         │   Tests 2         │
+└───────────────────┴───────────────────┘
+```
+
+Claude Code layouts support **autostart** (opt-in) to automatically launch Claude in the panes:
+
+```yaml
+modules:
+  claude:
+    autostart: true                  # default: false
+    command: "claude --model sonnet"  # default: "claude"
+```
+
+The `claude-agent-teams` layout launches Claude in Agent Teams mode (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1; claude --teammate-mode tmux`).
+
 Apply layouts with:
 ```bash
 pimpmytmux layout dev-fullstack
-pimpmytmux layout monitoring
+pimpmytmux layout claude-code
+pimpmytmux layout claude-agent-teams
 ```
 
 ## Zen Mode
