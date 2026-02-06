@@ -1,0 +1,42 @@
+# Claude Worktrees Layout Template
+# 2 side-by-side worktrees with Claude Code sessions
+
+name: Claude Worktrees
+description: 2 side-by-side worktrees with Claude Code sessions
+
+layout:
+  # Main horizontal split
+  orientation: horizontal
+  panes:
+    # Left column
+    - size: 50%
+      orientation: vertical
+      panes:
+        # Top left: Worktree 1 (65%)
+        - size: 65%
+          name: worktree-1
+          command: ""
+          focus: true
+
+        # Bottom left: Tests/Logs 1 (35%)
+        - size: 35%
+          name: tests-1
+          command: ""
+
+    # Right column
+    - size: 50%
+      orientation: vertical
+      panes:
+        # Top right: Worktree 2 (65%)
+        - size: 65%
+          name: worktree-2
+          command: ""
+
+        # Bottom right: Tests/Logs 2 (35%)
+        - size: 35%
+          name: tests-2
+          command: ""
+
+auto_apply: []
+
+keybinding: "M-7"

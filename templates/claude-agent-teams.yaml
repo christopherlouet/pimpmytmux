@@ -1,0 +1,42 @@
+# Claude Agent Teams Layout Template
+# 4 equal panes for multi-agent collaboration
+
+name: Claude Agent Teams
+description: 4 equal panes for Claude Code Agent Teams
+
+layout:
+  # Main horizontal split
+  orientation: horizontal
+  panes:
+    # Left side
+    - size: 50%
+      orientation: vertical
+      panes:
+        # Top left: Team Lead
+        - size: 50%
+          name: lead
+          command: ""
+          focus: true
+
+        # Bottom left: Teammate 2
+        - size: 50%
+          name: teammate-2
+          command: ""
+
+    # Right side
+    - size: 50%
+      orientation: vertical
+      panes:
+        # Top right: Teammate 1
+        - size: 50%
+          name: teammate-1
+          command: ""
+
+        # Bottom right: Teammate 3
+        - size: 50%
+          name: teammate-3
+          command: ""
+
+auto_apply: []
+
+keybinding: "M-6"
