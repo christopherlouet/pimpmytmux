@@ -61,12 +61,14 @@ _claude_should_autostart() {
 _claude_launch_in_pane() {
     local pane_target="$1"
     local agent_teams="${2:-false}"
+    local claude_cmd
+    claude_cmd=$(get_config ".modules.claude.command" "claude")
 
     if [[ "$agent_teams" == "true" ]]; then
         tmux send-keys -t "$pane_target" \
-            "export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1; claude --teammate-mode tmux" Enter
+            "export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1; ${claude_cmd} --teammate-mode tmux" Enter
     else
-        tmux send-keys -t "$pane_target" "claude" Enter
+        tmux send-keys -t "$pane_target" "${claude_cmd}" Enter
     fi
 }
 

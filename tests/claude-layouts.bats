@@ -99,9 +99,9 @@ setup() {
 @test "get_claude_status returns empty with ps fallback when no claude" {
     source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
 
-    # Mock tmux
+    # Mock tmux list-panes
     function tmux() {
-        if [[ "$1" == "display-message" ]]; then
+        if [[ "$1" == "list-panes" ]]; then
             echo "12345"
         fi
     }
@@ -180,9 +180,9 @@ setup() {
 @test "get_claude_status_formatted returns empty when inactive" {
     source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
 
-    # Mock tmux
+    # Mock tmux list-panes
     function tmux() {
-        if [[ "$1" == "display-message" ]]; then
+        if [[ "$1" == "list-panes" ]]; then
             echo "99999"
         fi
     }
@@ -197,6 +197,40 @@ setup() {
     run get_claude_status_formatted
     assert_success
     [[ -z "$output" ]]
+}
+
+# -----------------------------------------------------------------------------
+# Detection precision tests (P1 - false positive prevention)
+# -----------------------------------------------------------------------------
+
+@test "_claude_detect_pgrep uses exact process name match" {
+    source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
+
+    local pgrep_flags=""
+    function pgrep() {
+        pgrep_flags="$*"
+        return 0
+    }
+    export -f pgrep
+
+    _claude_detect_pgrep "12345"
+
+    # Should use -x (exact name match) instead of -f (full cmdline match)
+    [[ "$pgrep_flags" == *"-x"* ]]
+}
+
+@test "_claude_detect_ps rejects PID substring matches" {
+    source "${PIMPMYTMUX_ROOT}/modules/monitoring/claude-status.sh"
+
+    # Process has PPID 1234 but we search for parent 123
+    function ps() {
+        printf "%7d %7d %s\n" 5678 1234 "claude"
+    }
+    export -f ps
+
+    # Should NOT match because parent PID is 1234, not 123
+    run _claude_detect_ps "123"
+    assert_failure
 }
 
 # =============================================================================
@@ -592,6 +626,61 @@ modules:
 
     [[ "$found_env" == "true" ]]
     [[ "$found_flag" == "true" ]]
+}
+
+@test "_claude_launch_in_pane uses custom command from YAML config" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    create_test_config '
+modules:
+  claude:
+    command: "claude --model sonnet"
+'
+
+    local tmux_calls=()
+    function tmux() {
+        tmux_calls+=("$*")
+    }
+    export -f tmux
+
+    _claude_launch_in_pane "%0"
+
+    local found_custom=false
+    for cmd in "${tmux_calls[@]}"; do
+        [[ "$cmd" == *"claude --model sonnet"* ]] && found_custom=true
+    done
+
+    [[ "$found_custom" == "true" ]]
+}
+
+@test "_claude_launch_in_pane agent_teams appends flags to custom command" {
+    source "${PIMPMYTMUX_ROOT}/lib/wizard.sh"
+    source "${PIMPMYTMUX_ROOT}/modules/sessions/layouts.sh"
+
+    create_test_config '
+modules:
+  claude:
+    command: "claude --profile dev"
+'
+
+    local tmux_calls=()
+    function tmux() {
+        tmux_calls+=("$*")
+    }
+    export -f tmux
+
+    _claude_launch_in_pane "%0" "true"
+
+    local found_env=false
+    local found_custom_flag=false
+    for cmd in "${tmux_calls[@]}"; do
+        [[ "$cmd" == *"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"* ]] && found_env=true
+        [[ "$cmd" == *"claude --profile dev --teammate-mode tmux"* ]] && found_custom_flag=true
+    done
+
+    [[ "$found_env" == "true" ]]
+    [[ "$found_custom_flag" == "true" ]]
 }
 
 # =============================================================================

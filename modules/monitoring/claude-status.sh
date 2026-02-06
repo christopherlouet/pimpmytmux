@@ -19,7 +19,9 @@ CLAUDE_STATUS_ICON="${CLAUDE_STATUS_ICON:-CC}"
 ## Detect Claude Code process in current pane via pgrep
 _claude_detect_pgrep() {
     local pane_pid="$1"
-    if pgrep -P "$pane_pid" -f "claude" >/dev/null 2>&1; then
+    # Use -x for exact process name match (avoids false positives like
+    # "vim claude-status.sh" or "grep claude")
+    if pgrep -P "$pane_pid" -x "claude" >/dev/null 2>&1; then
         return 0
     fi
     return 1
@@ -28,7 +30,9 @@ _claude_detect_pgrep() {
 ## Detect Claude Code process in current pane via ps (fallback)
 _claude_detect_ps() {
     local pane_pid="$1"
-    if ps -o pid=,ppid=,comm= 2>/dev/null | grep -q "$pane_pid.*claude"; then
+    # Use awk for exact PPID field match (avoids PID substring false positives)
+    if ps -o pid=,ppid=,comm= 2>/dev/null | awk -v ppid="$pane_pid" \
+        '$2 == ppid && $3 == "claude" { found=1; exit } END { exit !found }'; then
         return 0
     fi
     return 1
@@ -38,12 +42,18 @@ _claude_detect_ps() {
 _claude_count_window_agents() {
     local count=0
     local pane_pids
+    local use_pgrep=false
 
     pane_pids=$(tmux list-panes -F '#{pane_pid}' 2>/dev/null) || return 0
 
+    # Check pgrep availability once before the loop
+    if check_command pgrep 2>/dev/null; then
+        use_pgrep=true
+    fi
+
     while IFS= read -r pid; do
         [[ -z "$pid" ]] && continue
-        if check_command pgrep 2>/dev/null; then
+        if [[ "$use_pgrep" == "true" ]]; then
             if _claude_detect_pgrep "$pid"; then
                 count=$((count + 1))
             fi
